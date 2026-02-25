@@ -378,7 +378,7 @@
   </div>
 
   <div class="thumb-nav">
-    <div class="thumb-label">Tutte le opere (Max 30)</div>
+    <div class="thumb-label">Opere</div>
     <div class="thumb-container" id="thumbContainer"></div>
   </div>
 
@@ -458,9 +458,9 @@
       container.appendChild(trackEl);
       if (x === 0) x = -oneSetWidth;
 
-      // Build Thumbnails (Max 30)
+      // Build Thumbnails
       thumbContainer.innerHTML = '';
-      data.slice(0, 30).forEach((sub, i) => {
+      data.forEach((sub, i) => {
         const thumb = document.createElement('div');
         thumb.className = 'thumb-item';
         thumb.innerHTML = `<img src="${sub.imageUrl}" alt="thumb">`;
