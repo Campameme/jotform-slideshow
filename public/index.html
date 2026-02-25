@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,7 +10,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     :root {
       --bg: #0a0a0f;
@@ -40,6 +47,7 @@
       padding: 48px 24px 36px;
       position: relative;
     }
+
     header::after {
       content: '';
       display: block;
@@ -49,6 +57,7 @@
       border-radius: 2px;
       margin: 20px auto 0;
     }
+
     header h1 {
       font-size: clamp(1.8rem, 4vw, 3rem);
       font-weight: 700;
@@ -58,6 +67,7 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
+
     header p {
       margin-top: 10px;
       color: var(--muted);
@@ -80,15 +90,18 @@
     .slideshow-wrapper::after {
       content: '';
       position: absolute;
-      top: 0; bottom: 0;
+      top: 0;
+      bottom: 0;
       width: 120px;
       z-index: 10;
       pointer-events: none;
     }
+
     .slideshow-wrapper::before {
       left: 0;
       background: linear-gradient(90deg, var(--bg), transparent);
     }
+
     .slideshow-wrapper::after {
       right: 0;
       background: linear-gradient(270deg, var(--bg), transparent);
@@ -100,11 +113,19 @@
       animation: scroll var(--speed) linear infinite;
       will-change: transform;
     }
-    .track:hover { animation-play-state: paused; }
+
+    .track:hover {
+      animation-play-state: paused;
+    }
 
     @keyframes scroll {
-      0%   { transform: translateX(0); }
-      100% { transform: translateX(var(--track-shift, -50%)); }
+      0% {
+        transform: translateX(0);
+      }
+
+      100% {
+        transform: translateX(var(--track-shift, -50%));
+      }
     }
 
     /* ── Cards ── */
@@ -121,6 +142,7 @@
       position: relative;
       cursor: default;
     }
+
     .card:hover {
       transform: translateY(-6px) scale(1.02);
       box-shadow: 0 20px 60px rgba(124, 111, 247, 0.25);
@@ -140,8 +162,9 @@
       align-items: center;
       justify-content: center;
       padding: 0 16px;
-      background: linear-gradient(180deg, rgba(19,19,26,0) 0%, var(--surface) 40%);
+      background: linear-gradient(180deg, rgba(19, 19, 26, 0) 0%, var(--surface) 40%);
     }
+
     .card-name {
       font-size: 1.1rem;
       font-weight: 600;
@@ -158,13 +181,18 @@
     .card::after {
       content: '';
       position: absolute;
-      bottom: 0; left: 0; right: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
       height: 3px;
       background: linear-gradient(90deg, var(--accent), var(--accent2));
       opacity: 0;
       transition: opacity 0.3s;
     }
-    .card:hover::after { opacity: 1; }
+
+    .card:hover::after {
+      opacity: 1;
+    }
 
     /* ── Empty state ── */
     .empty-state {
@@ -173,9 +201,23 @@
       color: var(--muted);
       width: 100%;
     }
-    .empty-state .icon { font-size: 4rem; margin-bottom: 16px; }
-    .empty-state h2 { font-size: 1.4rem; font-weight: 600; margin-bottom: 8px; color: var(--text); }
-    .empty-state p { font-size: 0.95rem; line-height: 1.6; }
+
+    .empty-state .icon {
+      font-size: 4rem;
+      margin-bottom: 16px;
+    }
+
+    .empty-state h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .empty-state p {
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
 
     /* ── Status dot ── */
     .status-bar {
@@ -188,152 +230,170 @@
       justify-content: center;
       gap: 8px;
     }
+
     .dot {
-      width: 8px; height: 8px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: var(--accent2);
       animation: pulse 2s ease-in-out infinite;
     }
+
     @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.8); }
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.8);
+      }
     }
   </style>
 </head>
+
 <body>
 
-<header>
-  <h1>✨ Galleria</h1>
-  <p>Tutte le immagini inviate in tempo reale</p>
-</header>
+  <header>
+    <h1>✨ Galleria</h1>
+    <p>Tutte le immagini inviate in tempo reale</p>
+  </header>
 
-<div class="slideshow-wrapper" id="showWrapper">
-  <div class="empty-state" id="emptyState">
-    <div class="icon">🖼️</div>
-    <h2>La galleria è vuota</h2>
-    <p>Le immagini caricate tramite il form appariranno qui automaticamente.</p>
+  <div class="slideshow-wrapper" id="showWrapper">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">🖼️</div>
+      <h2>La galleria è vuota</h2>
+      <p>Le immagini caricate tramite il form appariranno qui automaticamente.</p>
+    </div>
+    <!-- Track injected by JS -->
   </div>
-  <!-- Track injected by JS -->
-</div>
 
-<div class="status-bar">
-  <span class="dot"></span>
-  <span id="statusText">Caricamento in corso…</span>
-</div>
+  <div class="status-bar">
+    <span class="dot"></span>
+    <span id="statusText">Caricamento in corso…</span>
+  </div>
 
-<script>
-  const API_URL = '/.netlify/functions/submissions';
-  const POLL_INTERVAL = 30000; // 30 seconds
-  const CARD_W = 380;
-  const GAP = 28;
+  <script>
+    const API_URL = '/.netlify/functions/submissions';
+    const POLL_INTERVAL = 30000; // 30 seconds
+    const CARD_W = 380;
+    const GAP = 28;
 
-  let currentCount = 0;
-  let trackEl = null;
+    let currentCount = 0;
+    let trackEl = null;
 
-  // ── Build / rebuild the track ──────────────────────────────────────────────
-  function buildTrack(submissions) {
-    const wrapper = document.getElementById('showWrapper');
-    const empty   = document.getElementById('emptyState');
+    // ── Build / rebuild the track ──────────────────────────────────────────────
+    function buildTrack(submissions) {
+      const wrapper = document.getElementById('showWrapper');
+      const empty = document.getElementById('emptyState');
 
-    if (!submissions || submissions.length === 0) {
-      empty.style.display = 'block';
-      if (trackEl) { trackEl.remove(); trackEl = null; }
-      setStatus('Nessuna immagine ancora — aggiorno ogni 30 s');
-      return;
-    }
+      if (!submissions || submissions.length === 0) {
+        empty.style.display = 'block';
+        if (trackEl) { trackEl.remove(); trackEl = null; }
+        setStatus('Nessuna immagine ancora — aggiorno ogni 30 s');
+        return;
+      }
 
-    empty.style.display = 'none';
+      empty.style.display = 'none';
 
-    // Duplicate cards enough to fill > 2× viewport width for seamless loop
-    const minCopies = Math.ceil((window.innerWidth * 3) / ((CARD_W + GAP) * submissions.length)) + 2;
-    const totalCopies = Math.max(minCopies, 4);
-    const cards = Array.from({ length: totalCopies }, () => submissions).flat();
+      // Duplicate cards enough to fill > 2× viewport width for seamless loop
+      const minCopies = Math.ceil((window.innerWidth * 3) / ((CARD_W + GAP) * submissions.length)) + 2;
+      const totalCopies = Math.max(minCopies, 4);
+      const cards = Array.from({ length: totalCopies }, () => submissions).flat();
 
-    const oneSetWidth = submissions.length * (CARD_W + GAP);
+      const oneSetWidth = submissions.length * (CARD_W + GAP);
 
-    if (trackEl) { trackEl.remove(); }
+      if (trackEl) { trackEl.remove(); }
 
-    trackEl = document.createElement('div');
-    trackEl.className = 'track';
+      trackEl = document.createElement('div');
+      trackEl.className = 'track';
 
-    // Set CSS variable for the animation shift (one full set)
-    trackEl.style.setProperty('--track-shift', `-${oneSetWidth}px`);
+      // Set CSS variable for the animation shift (one full set)
+      trackEl.style.setProperty('--track-shift', `-${oneSetWidth}px`);
 
-    // Adjust speed proportionally to number of items
-    const speed = Math.max(submissions.length * 6, 20);
-    trackEl.style.animationDuration = `${speed}s`;
+      // Adjust speed proportionally to number of items
+      const speed = Math.max(submissions.length * 6, 20);
+      trackEl.style.animationDuration = `${speed}s`;
 
-    cards.forEach(({ name, imageUrl }) => {
-      const card = document.createElement('div');
-      card.className = 'card';
+      cards.forEach(({ name, imageUrl }) => {
+        const card = document.createElement('div');
+        card.className = 'card';
 
-      const img = document.createElement('img');
-      img.className = 'card-img';
-      img.src = imageUrl || 'https://via.placeholder.com/380x384?text=Immagine';
-      img.alt = name || 'Immagine';
-      img.loading = 'lazy';
-      img.onerror = () => { img.src = 'https://via.placeholder.com/380x384?text=N%2FA'; };
+        const img = document.createElement('img');
+        img.className = 'card-img';
+        // Route through proxy to bypass Jotform CDN hotlink protection (fixes mobile)
+        const proxied = imageUrl
+          ? '/.netlify/functions/proxy?url=' + encodeURIComponent(imageUrl)
+          : 'https://via.placeholder.com/380x384?text=Immagine';
+        img.src = proxied;
+        img.alt = name || 'Immagine';
+        img.loading = 'lazy';
+        img.onerror = () => { img.src = 'https://via.placeholder.com/380x384?text=N%2FA'; };
 
-      const info = document.createElement('div');
-      info.className = 'card-info';
+        const info = document.createElement('div');
+        info.className = 'card-info';
 
-      const nameEl = document.createElement('div');
-      nameEl.className = 'card-name';
-      nameEl.textContent = name || '—';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'card-name';
+        nameEl.textContent = name || '—';
 
-      info.appendChild(nameEl);
-      card.appendChild(img);
-      card.appendChild(info);
-      trackEl.appendChild(card);
-    });
+        info.appendChild(nameEl);
+        card.appendChild(img);
+        card.appendChild(info);
+        trackEl.appendChild(card);
+      });
 
-    wrapper.appendChild(trackEl);
-    currentCount = submissions.length;
-    setStatus(`${submissions.length} immagine${submissions.length !== 1 ? 'i' : ''} • aggiorno ogni 30 s`);
-  }
-
-  // ── Fetch submissions from Netlify Function ──────────────────────────────
-  async function fetchSubmissions() {
-    try {
-      const res = await fetch(API_URL);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    } catch (err) {
-      console.error('Fetch error:', err);
-      return null;
-    }
-  }
-
-  function setStatus(msg) {
-    document.getElementById('statusText').textContent = msg;
-  }
-
-  // ── Poll loop ────────────────────────────────────────────────────────────
-  async function refresh() {
-    const submissions = await fetchSubmissions();
-    if (submissions === null) {
-      setStatus('Errore di connessione — riprovo tra 30 s');
-      return;
-    }
-    // Only rebuild DOM if count changed (new submissions)
-    if (submissions.length !== currentCount) {
-      buildTrack(submissions);
-    } else if (submissions.length > 0) {
+      wrapper.appendChild(trackEl);
+      currentCount = submissions.length;
       setStatus(`${submissions.length} immagine${submissions.length !== 1 ? 'i' : ''} • aggiorno ogni 30 s`);
     }
-  }
 
-  // ── Init ─────────────────────────────────────────────────────────────────
-  (async () => {
-    const submissions = await fetchSubmissions();
-    if (submissions !== null) {
-      buildTrack(submissions);
-    } else {
-      setStatus('Errore di connessione — riprovo tra 30 s');
+    // ── Fetch submissions from Netlify Function ──────────────────────────────
+    async function fetchSubmissions() {
+      try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
+      } catch (err) {
+        console.error('Fetch error:', err);
+        return null;
+      }
     }
-    setInterval(refresh, POLL_INTERVAL);
-  })();
-</script>
+
+    function setStatus(msg) {
+      document.getElementById('statusText').textContent = msg;
+    }
+
+    // ── Poll loop ────────────────────────────────────────────────────────────
+    async function refresh() {
+      const submissions = await fetchSubmissions();
+      if (submissions === null) {
+        setStatus('Errore di connessione — riprovo tra 30 s');
+        return;
+      }
+      // Only rebuild DOM if count changed (new submissions)
+      if (submissions.length !== currentCount) {
+        buildTrack(submissions);
+      } else if (submissions.length > 0) {
+        setStatus(`${submissions.length} immagine${submissions.length !== 1 ? 'i' : ''} • aggiorno ogni 30 s`);
+      }
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    (async () => {
+      const submissions = await fetchSubmissions();
+      if (submissions !== null) {
+        buildTrack(submissions);
+      } else {
+        setStatus('Errore di connessione — riprovo tra 30 s');
+      }
+      setInterval(refresh, POLL_INTERVAL);
+    })();
+  </script>
 </body>
+
 </html>
