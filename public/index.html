@@ -81,31 +81,40 @@
     }
 
     /* ── Navigation Controls ── */
-    .nav-ctrl {
-      position: fixed;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 100;
+    .controls-bar {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      padding: 10px;
+      align-items: center;
+      gap: 16px;
+      padding-bottom: 50px;
+      z-index: 100;
+      position: relative;
     }
 
-    .nav-ctrl.left {
-      left: 10px;
+    .jump-group {
+      display: flex;
+      gap: 10px;
+      background: rgba(19, 19, 26, 0.6);
+      padding: 8px 16px;
+      border-radius: 40px;
+      border: 1px solid rgba(124, 111, 247, 0.2);
+      backdrop-filter: blur(10px);
     }
 
-    .nav-ctrl.right {
-      right: 10px;
+    .jump-label {
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: -5px;
     }
 
     .nav-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: rgba(19, 19, 26, 0.85);
-      backdrop-filter: blur(8px);
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: var(--surface);
       border: 1px solid rgba(124, 111, 247, 0.3);
       color: var(--text);
       font-weight: 700;
@@ -114,40 +123,37 @@
       justify-content: center;
       cursor: pointer;
       transition: all 0.2s;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      font-size: 0.9rem;
     }
 
     .nav-btn:hover {
       background: var(--accent);
+      color: white;
       border-color: transparent;
-      transform: scale(1.1);
+      transform: translateY(-3px);
     }
 
     .nav-btn:active {
-      transform: scale(0.95);
+      transform: translateY(0);
     }
 
-    .nav-btn span {
-      font-size: 0.75rem;
-      margin-top: 2px;
+    .nav-btn.forward {
+      border-color: rgba(79, 209, 197, 0.4);
+    }
+
+    .nav-btn.forward:hover {
+      background: var(--accent2);
     }
 
     @media (max-width: 600px) {
-      .nav-ctrl {
-        top: auto;
-        bottom: 20px;
-        flex-direction: row;
-        left: 50% !important;
-        transform: translateX(-50%);
-      }
-
-      .nav-ctrl.left {
-        display: none;
+      .controls-bar {
+        padding-bottom: 30px;
       }
 
       .nav-btn {
-        width: 40px;
-        height: 40px;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
       }
     }
 
@@ -158,7 +164,7 @@
       align-items: center;
       position: relative;
       overflow: hidden;
-      padding: 40px 0;
+      padding: 20px 0 30px;
     }
 
     .slideshow-wrapper::before,
@@ -167,19 +173,19 @@
       position: absolute;
       top: 0;
       bottom: 0;
-      width: 10vw;
+      width: 12vw;
       z-index: 10;
       pointer-events: none;
     }
 
     .slideshow-wrapper::before {
       left: 0;
-      background: linear-gradient(90deg, var(--bg), transparent);
+      background: linear-gradient(90deg, var(--bg) 10%, transparent);
     }
 
     .slideshow-wrapper::after {
       right: 0;
-      background: linear-gradient(270deg, var(--bg), transparent);
+      background: linear-gradient(270deg, var(--bg) 10%, transparent);
     }
 
     .track {
@@ -319,21 +325,22 @@
     <p>Sanmemini Show</p>
   </header>
 
-  <!-- Navigation Controls -->
-  <div class="nav-ctrl left">
-    <button class="nav-btn" title="Back 5" onclick="jump(-5)"><span>5</span></button>
-    <button class="nav-btn" title="Back 3" onclick="jump(-3)"><span>3</span></button>
-    <button class="nav-btn" title="Back 1" onclick="jump(-1)"><span>1</span></button>
-  </div>
-  <div class="nav-ctrl right">
-    <button class="nav-btn" title="Forward 1" onclick="jump(1)"><span>1</span></button>
-    <button class="nav-btn" title="Forward 3" onclick="jump(3)"><span>3</span></button>
-    <button class="nav-btn" title="Forward 5" onclick="jump(5)"><span>5</span></button>
-  </div>
-
   <div class="slideshow-wrapper" id="showWrapper">
     <div class="empty-state" id="emptyState">
       <h2>In caricamento...</h2>
+    </div>
+  </div>
+
+  <div class="controls-bar">
+    <div class="jump-label">Navigazione</div>
+    <div class="jump-group">
+      <button class="nav-btn" onclick="jump(-5)">-5</button>
+      <button class="nav-btn" onclick="jump(-3)">-3</button>
+      <button class="nav-btn" onclick="jump(-1)">-1</button>
+      <span style="width: 10px;"></span>
+      <button class="nav-btn forward" onclick="jump(1)">+1</button>
+      <button class="nav-btn forward" onclick="jump(3)">+3</button>
+      <button class="nav-btn forward" onclick="jump(5)">+5</button>
     </div>
   </div>
 
@@ -344,10 +351,10 @@
     let submissions = [];
     let trackEl = null;
     let x = 0;
-    let speed = 1.0;
+    let speed = 0.8;
     let oneSetWidth = 0;
     let isPaused = false;
-    let targetX = null;
+    let isJumping = false;
 
     function getCardW() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 380; }
     function getGap() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 32; }
@@ -370,8 +377,8 @@
       const gap = getGap();
       oneSetWidth = data.length * (cardW + gap);
 
-      const minCopies = Math.ceil((window.innerWidth * 3) / oneSetWidth) + 2;
-      const cards = Array.from({ length: Math.max(minCopies, 3) }, () => [...data]).flat();
+      // 4 sets total to have plenty of room for jumps
+      const cards = Array.from({ length: 4 }, () => [...data]).flat();
 
       if (trackEl) trackEl.remove();
       trackEl = document.createElement('div');
@@ -380,107 +387,90 @@
       cards.forEach((sub) => {
         const card = document.createElement('div');
         card.className = 'card';
-
         const media = document.createElement('div');
         media.className = 'card-media';
-
-        // Like Button
         const isLiked = localStorage.getItem('liked_' + sub.submissionId);
         const likeBtn = document.createElement('button');
         likeBtn.className = 'like-btn' + (isLiked ? ' liked' : '');
-        likeBtn.innerHTML = `
-          <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-          <span id="likes-${sub.submissionId}">${sub.likes || 0}</span>
-        `;
+        likeBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span id="likes-${sub.submissionId}">${sub.likes || 0}</span>`;
         likeBtn.onclick = (e) => { e.stopPropagation(); toggleLike(sub.submissionId); };
-
         const blurImg = document.createElement('img');
         blurImg.className = 'card-img-blur';
         blurImg.src = sub.imageUrl;
-
         const img = document.createElement('img');
         img.className = 'card-img';
         img.src = sub.imageUrl;
         img.onload = () => img.classList.add('loaded');
-
-        media.appendChild(blurImg);
-        media.appendChild(img);
-        media.appendChild(likeBtn);
-
+        media.appendChild(blurImg); media.appendChild(img); media.appendChild(likeBtn);
         const info = document.createElement('div');
         info.className = 'card-info';
         const nameEl = document.createElement('div');
         nameEl.className = 'card-name';
         nameEl.textContent = sub.name || 'Senza nome';
         info.appendChild(nameEl);
-
-        card.appendChild(media);
-        card.appendChild(info);
+        card.appendChild(media); card.appendChild(info);
         trackEl.appendChild(card);
       });
 
       wrapper.appendChild(trackEl);
+      // Start in the middle
+      x = -oneSetWidth;
       requestAnimationFrame(animate);
     }
 
     async function toggleLike(id) {
-      if (localStorage.getItem('liked_' + id)) return; // already liked
-
-      const span = document.getElementById('likes-' + id);
+      if (localStorage.getItem('liked_' + id)) return;
       const btns = document.querySelectorAll(`[id="likes-${id}"]`);
-
       try {
-        const res = await fetch(LIKE_URL, {
-          method: 'POST',
-          body: JSON.stringify({ submissionId: id })
-        });
+        const res = await fetch(LIKE_URL, { method: 'POST', body: JSON.stringify({ submissionId: id }) });
         const data = await res.json();
         if (data.success) {
           localStorage.setItem('liked_' + id, 'true');
-          btns.forEach(b => {
-            b.textContent = data.likes;
-            b.parentElement.classList.add('liked');
-          });
+          btns.forEach(b => { b.textContent = data.likes; b.parentElement.classList.add('liked'); });
         }
       } catch (err) { }
     }
 
     function animate() {
-      if (!isPaused) {
+      if (!isPaused && !isJumping) {
         x -= speed;
-        if (x < -oneSetWidth) x += oneSetWidth;
-        if (x > 0) x -= oneSetWidth;
+        // Keep in the safe range [-2*oneSetWidth, -oneSetWidth]
+        if (x < -2 * oneSetWidth) x += oneSetWidth;
+        if (x > -oneSetWidth) x -= oneSetWidth;
       }
-
-      // Smooth jump interpolation
-      if (targetX !== null) {
-        x += (targetX - x) * 0.1;
-        if (Math.abs(targetX - x) < 1) {
-          x = targetX;
-          targetX = null;
-        }
-      }
-
       trackEl.style.transform = `translateX(${x}px)`;
       requestAnimationFrame(animate);
     }
 
     function jump(count) {
+      if (isJumping) return;
+      isJumping = true;
       const step = getCardW() + getGap();
-      // targetX allows for a smooth JS transition instead of a snap
-      if (targetX === null) targetX = x;
-      targetX -= count * step;
+      const targetDelta = count * step;
+
+      // Use CSS transition for the manual jump
+      trackEl.style.transition = 'transform 0.5s cubic-bezier(0.2, 0, 0.2, 1)';
+      x -= targetDelta;
+      trackEl.style.transform = `translateX(${x}px)`;
+
+      setTimeout(() => {
+        trackEl.style.transition = 'none';
+        // Normalize x after jump to keep in bounds
+        while (x < -2 * oneSetWidth) x += oneSetWidth;
+        while (x > -oneSetWidth) x -= oneSetWidth;
+        trackEl.style.transform = `translateX(${x}px)`;
+        isJumping = false;
+      }, 500);
     }
 
     (async () => {
       const data = await fetchSubmissions();
       buildTrack(data);
-
-      document.getElementById('showWrapper').addEventListener('mouseenter', () => isPaused = true);
-      document.getElementById('showWrapper').addEventListener('mouseleave', () => isPaused = false);
-      // Mobile touch pausing
-      document.getElementById('showWrapper').addEventListener('touchstart', () => isPaused = true);
-      document.getElementById('showWrapper').addEventListener('touchend', () => isPaused = false);
+      const wrapper = document.getElementById('showWrapper');
+      wrapper.addEventListener('mouseenter', () => isPaused = true);
+      wrapper.addEventListener('mouseleave', () => isPaused = false);
+      wrapper.addEventListener('touchstart', () => isPaused = true);
+      wrapper.addEventListener('touchend', () => isPaused = false);
     })();
   </script>
 </body>
