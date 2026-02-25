@@ -35,7 +35,8 @@ async function updateBin(submissions) {
 }
 
 async function getJotformSubmissions() {
-    const url = `https://api.jotform.com/form/${JOTFORM_FORM_ID}/submissions?apiKey=${JOTFORM_API_KEY}&limit=1000&orderby=created_at`;
+    // Account is on EU server — must use api.eu.jotform.com
+    const url = `https://api.eu.jotform.com/form/${JOTFORM_FORM_ID}/submissions?apiKey=${JOTFORM_API_KEY}&limit=1000&orderby=created_at`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Jotform API ${res.status}`);
     const json = await res.json();
