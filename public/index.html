@@ -114,8 +114,11 @@
       will-change: transform;
     }
 
-    .track:hover {
-      animation-play-state: paused;
+    /* Pause on hover only on devices that support true hover (not touch) */
+    @media (hover: hover) {
+      .track:hover {
+        animation-play-state: paused;
+      }
     }
 
     @keyframes scroll {
@@ -143,10 +146,12 @@
       cursor: default;
     }
 
-    .card:hover {
-      transform: translateY(-6px) scale(1.02);
-      box-shadow: 0 20px 60px rgba(124, 111, 247, 0.25);
-      z-index: 5;
+    @media (hover: hover) {
+      .card:hover {
+        transform: translateY(-6px) scale(1.02);
+        box-shadow: 0 20px 60px rgba(124, 111, 247, 0.25);
+        z-index: 5;
+      }
     }
 
     .card-img {
@@ -324,11 +329,9 @@
 
         const img = document.createElement('img');
         img.className = 'card-img';
-        // Route through proxy to bypass Jotform CDN hotlink protection (fixes mobile)
-        const proxied = imageUrl
-          ? '/.netlify/functions/proxy?url=' + encodeURIComponent(imageUrl)
-          : 'https://via.placeholder.com/380x384?text=Immagine';
-        img.src = proxied;
+        // Use direct URL with no-referrer to bypass Jotform CDN hotlink protection
+        img.src = imageUrl || 'https://via.placeholder.com/380x384?text=Immagine';
+        img.referrerPolicy = 'no-referrer';
         img.alt = name || 'Immagine';
         img.loading = 'lazy';
         img.onerror = () => { img.src = 'https://via.placeholder.com/380x384?text=N%2FA'; };
