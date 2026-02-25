@@ -41,7 +41,10 @@ exports.handler = async (event) => {
         }
 
         const data = await res.json();
-        const submissions = Array.isArray(data) ? data : [];
+        // Filter out the init placeholder and any entry without an imageUrl
+        const submissions = Array.isArray(data)
+            ? data.filter(s => s && s.imageUrl && !s.init)
+            : [];
 
         return {
             statusCode: 200,
