@@ -6,7 +6,6 @@
   <meta name="referrer" content="no-referrer" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Memefattori — Galleria</title>
-  <meta name="description" content="I vostri sanmemini in slideshow infinito" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
@@ -27,15 +26,15 @@
       --text: #f0f0f8;
       --muted: #8888aa;
       --card-w: 380px;
-      --card-h: 500px;
+      --card-h: 520px;
       --gap: 32px;
     }
 
     @media (max-width: 600px) {
       :root {
         --card-w: 280px;
-        --card-h: 380px;
-        --gap: 20px;
+        --card-h: 420px;
+        --gap: 16px;
       }
 
       header {
@@ -47,7 +46,7 @@
       }
 
       header p {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
       }
     }
 
@@ -56,55 +55,110 @@
       color: var(--text);
       font-family: 'Inter', sans-serif;
       min-height: 100vh;
-      overflow-x: hidden;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
     }
 
-    /* ── Header ── */
     header {
       text-align: center;
-      padding: 40px 24px 32px;
+      padding: 30px 24px 20px;
       position: relative;
-      z-index: 20;
-    }
-
-    header::after {
-      content: '';
-      display: block;
-      width: 60px;
-      height: 3px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      border-radius: 2px;
-      margin: 16px auto 0;
+      z-index: 50;
     }
 
     .header-logo {
-      height: 90px;
-      width: auto;
-      display: block;
-      margin: 0 auto;
-      object-fit: contain;
+      height: 80px;
       filter: drop-shadow(0 4px 20px rgba(124, 111, 247, 0.4));
     }
 
     header p {
-      margin-top: 14px;
+      margin-top: 10px;
       color: var(--muted);
-      font-size: 1.1rem;
-      font-weight: 400;
-      letter-spacing: 0.05em;
+      font-size: 1rem;
       text-transform: uppercase;
+      letter-spacing: 0.1em;
     }
 
-    /* ── Slideshow container ── */
-    .slideshow-wrapper {
-      flex: 1;
-      overflow: hidden;
+    /* ── Navigation Controls ── */
+    .nav-ctrl {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 10px;
+    }
+
+    .nav-ctrl.left {
+      left: 10px;
+    }
+
+    .nav-ctrl.right {
+      right: 10px;
+    }
+
+    .nav-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(19, 19, 26, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(124, 111, 247, 0.3);
+      color: var(--text);
+      font-weight: 700;
       display: flex;
       align-items: center;
-      padding: 0 0 60px;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .nav-btn:hover {
+      background: var(--accent);
+      border-color: transparent;
+      transform: scale(1.1);
+    }
+
+    .nav-btn:active {
+      transform: scale(0.95);
+    }
+
+    .nav-btn span {
+      font-size: 0.75rem;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 600px) {
+      .nav-ctrl {
+        top: auto;
+        bottom: 20px;
+        flex-direction: row;
+        left: 50% !important;
+        transform: translateX(-50%);
+      }
+
+      .nav-ctrl.left {
+        display: none;
+      }
+
+      .nav-btn {
+        width: 40px;
+        height: 40px;
+      }
+    }
+
+    /* ── Slideshow ── */
+    .slideshow-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
       position: relative;
+      overflow: hidden;
+      padding: 40px 0;
     }
 
     .slideshow-wrapper::before,
@@ -113,7 +167,7 @@
       position: absolute;
       top: 0;
       bottom: 0;
-      width: 15vw;
+      width: 10vw;
       z-index: 10;
       pointer-events: none;
     }
@@ -131,26 +185,8 @@
     .track {
       display: flex;
       gap: var(--gap);
-      animation: scroll linear infinite;
-      animation-duration: var(--speed, 35s);
-      will-change: transform;
       padding-left: var(--gap);
-    }
-
-    @media (hover: hover) {
-      .track:hover {
-        animation-play-state: paused;
-      }
-    }
-
-    @keyframes scroll {
-      0% {
-        transform: translateX(0);
-      }
-
-      100% {
-        transform: translateX(var(--track-shift, -50%));
-      }
+      will-change: transform;
     }
 
     /* ── Cards ── */
@@ -159,30 +195,25 @@
       width: var(--card-w);
       height: var(--card-h);
       background: var(--surface);
-      border-radius: 24px;
+      border-radius: 28px;
       overflow: hidden;
-      border: 1px solid rgba(124, 111, 247, 0.12);
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+      border: 1px solid rgba(124, 111, 247, 0.15);
       position: relative;
-      cursor: default;
       display: flex;
       flex-direction: column;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      transition: transform 0.3s, box-shadow 0.3s;
     }
 
-    @media (hover: hover) {
-      .card:hover {
-        transform: translateY(-10px) scale(1.03);
-        box-shadow: 0 25px 70px rgba(124, 111, 247, 0.3);
-        z-index: 5;
-        border-color: rgba(124, 111, 247, 0.4);
-      }
+    .card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 50px rgba(124, 111, 247, 0.2);
     }
 
     .card-media {
       position: relative;
       width: 100%;
-      height: 82%;
+      height: 80%;
       background: #000;
       overflow: hidden;
     }
@@ -196,8 +227,7 @@
       object-fit: cover;
       filter: blur(25px) brightness(0.6);
       opacity: 0.5;
-      transform: scale(1.2);
-      pointer-events: none;
+      transform: scale(1.1);
     }
 
     .card-img {
@@ -206,13 +236,53 @@
       width: 100%;
       height: 100%;
       object-fit: contain;
-      display: block;
       opacity: 0;
-      transition: opacity 0.6s ease;
+      transition: opacity 0.5s;
     }
 
     .card-img.loaded {
       opacity: 1;
+    }
+
+    /* ── Like Button ── */
+    .like-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 14px;
+      border-radius: 30px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .like-btn:hover {
+      background: rgba(0, 0, 0, 0.7);
+      transform: scale(1.05);
+    }
+
+    .like-btn.liked {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #ef4444;
+    }
+
+    .like-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    .like-btn span {
+      font-size: 0.9rem;
+      font-weight: 600;
     }
 
     .card-info {
@@ -221,45 +291,23 @@
       align-items: center;
       justify-content: center;
       padding: 0 20px;
-      background: linear-gradient(180deg, rgba(19, 19, 26, 0) 0%, var(--surface) 20%);
     }
 
     .card-name {
-      font-size: 1.15rem;
+      font-size: 1.2rem;
       font-weight: 700;
       color: var(--text);
       text-align: center;
-      letter-spacing: 0.03em;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 100%;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
     }
 
-    /* ── Empty state ── */
     .empty-state {
       text-align: center;
-      padding: 80px 24px;
+      padding: 100px 24px;
       color: var(--muted);
       width: 100%;
-    }
-
-    .empty-state .icon {
-      font-size: 4rem;
-      margin-bottom: 20px;
-    }
-
-    .empty-state h2 {
-      font-size: 1.6rem;
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: var(--text);
-    }
-
-    .empty-state p {
-      font-size: 1rem;
-      line-height: 1.6;
     }
   </style>
 </head>
@@ -268,102 +316,102 @@
 
   <header>
     <img src="/logo.png" alt="Memefattori" class="header-logo" />
-    <p>Sanmemini Slideshow</p>
+    <p>Sanmemini Show</p>
   </header>
+
+  <!-- Navigation Controls -->
+  <div class="nav-ctrl left">
+    <button class="nav-btn" title="Back 5" onclick="jump(-5)"><span>5</span></button>
+    <button class="nav-btn" title="Back 3" onclick="jump(-3)"><span>3</span></button>
+    <button class="nav-btn" title="Back 1" onclick="jump(-1)"><span>1</span></button>
+  </div>
+  <div class="nav-ctrl right">
+    <button class="nav-btn" title="Forward 1" onclick="jump(1)"><span>1</span></button>
+    <button class="nav-btn" title="Forward 3" onclick="jump(3)"><span>3</span></button>
+    <button class="nav-btn" title="Forward 5" onclick="jump(5)"><span>5</span></button>
+  </div>
 
   <div class="slideshow-wrapper" id="showWrapper">
     <div class="empty-state" id="emptyState">
-      <div class="icon">🖼️</div>
-      <h2>La galleria è vuota</h2>
-      <p>Le immagini caricate tramite il form appariranno qui automaticamente.</p>
+      <h2>In caricamento...</h2>
     </div>
   </div>
 
   <script>
     const API_URL = '/.netlify/functions/submissions';
-    const POLL_MS = 60000; // reload every 1 min
+    const LIKE_URL = '/.netlify/functions/like';
 
-    // Config values are now CSS variables, but we need them for JS calculation
-    function getCardW() {
-      return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 380;
-    }
-    function getGap() {
-      return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 32;
-    }
-
+    let submissions = [];
     let trackEl = null;
+    let x = 0;
+    let speed = 1.0;
+    let oneSetWidth = 0;
+    let isPaused = false;
+    let targetX = null;
 
-    // ── Fisher-Yates shuffle ────────────────────────────────────────────────────
-    function shuffle(arr) {
-      const a = [...arr];
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
+    function getCardW() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 380; }
+    function getGap() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 32; }
+
+    async function fetchSubmissions() {
+      try {
+        const res = await fetch(`${API_URL}?_=${Date.now()}`);
+        return await res.json();
+      } catch (err) { return []; }
     }
 
-    // ── Build seamless fair-shuffle track ───────────────────────────────────────
-    function buildTrack(submissions) {
+    function buildTrack(data) {
+      submissions = data;
       const wrapper = document.getElementById('showWrapper');
       const empty = document.getElementById('emptyState');
-
-      if (!submissions || submissions.length === 0) {
-        empty.style.display = 'block';
-        if (trackEl) { trackEl.remove(); trackEl = null; }
-        return;
-      }
-
+      if (!data || data.length === 0) { empty.innerHTML = '<h2>Galleria vuota</h2>'; return; }
       empty.style.display = 'none';
 
       const cardW = getCardW();
       const gap = getGap();
-      const ordered = shuffle(submissions);
-      const oneSetWidth = ordered.length * (cardW + gap);
+      oneSetWidth = data.length * (cardW + gap);
 
       const minCopies = Math.ceil((window.innerWidth * 3) / oneSetWidth) + 2;
-      const totalCopies = Math.max(minCopies, 3);
-      const cards = Array.from({ length: totalCopies }, () => [...ordered]).flat();
+      const cards = Array.from({ length: Math.max(minCopies, 3) }, () => [...data]).flat();
 
       if (trackEl) trackEl.remove();
-
       trackEl = document.createElement('div');
       trackEl.className = 'track';
-      trackEl.style.setProperty('--track-shift', `-${oneSetWidth}px`);
-      trackEl.style.setProperty('--speed', `${Math.max(ordered.length * 8, 25)}s`);
 
-      cards.forEach(({ name, imageUrl }) => {
+      cards.forEach((sub) => {
         const card = document.createElement('div');
         card.className = 'card';
 
         const media = document.createElement('div');
         media.className = 'card-media';
 
-        // Background blur layer
+        // Like Button
+        const isLiked = localStorage.getItem('liked_' + sub.submissionId);
+        const likeBtn = document.createElement('button');
+        likeBtn.className = 'like-btn' + (isLiked ? ' liked' : '');
+        likeBtn.innerHTML = `
+          <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          <span id="likes-${sub.submissionId}">${sub.likes || 0}</span>
+        `;
+        likeBtn.onclick = (e) => { e.stopPropagation(); toggleLike(sub.submissionId); };
+
         const blurImg = document.createElement('img');
         blurImg.className = 'card-img-blur';
-        blurImg.src = imageUrl;
-        blurImg.alt = '';
-        blurImg.setAttribute('referrerpolicy', 'no-referrer');
+        blurImg.src = sub.imageUrl;
 
-        // Main image layer
         const img = document.createElement('img');
         img.className = 'card-img';
-        img.src = imageUrl || 'https://via.placeholder.com/380x384?text=Immagine';
-        img.setAttribute('referrerpolicy', 'no-referrer');
-        img.alt = name || 'Immagine';
-        img.loading = 'lazy';
+        img.src = sub.imageUrl;
         img.onload = () => img.classList.add('loaded');
-        img.onerror = () => { img.src = 'https://via.placeholder.com/380x384?text=N%2FA'; };
 
         media.appendChild(blurImg);
         media.appendChild(img);
+        media.appendChild(likeBtn);
 
         const info = document.createElement('div');
         info.className = 'card-info';
         const nameEl = document.createElement('div');
         nameEl.className = 'card-name';
-        nameEl.textContent = name || '—';
+        nameEl.textContent = sub.name || 'Senza nome';
         info.appendChild(nameEl);
 
         card.appendChild(media);
@@ -372,35 +420,69 @@
       });
 
       wrapper.appendChild(trackEl);
+      requestAnimationFrame(animate);
     }
 
-    // ── Fetch (cache-busted) ────────────────────────────────────────────────────
-    async function fetchSubmissions() {
+    async function toggleLike(id) {
+      if (localStorage.getItem('liked_' + id)) return; // already liked
+
+      const span = document.getElementById('likes-' + id);
+      const btns = document.querySelectorAll(`[id="likes-${id}"]`);
+
       try {
-        const res = await fetch(`${API_URL}?_=${Date.now()}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const res = await fetch(LIKE_URL, {
+          method: 'POST',
+          body: JSON.stringify({ submissionId: id })
+        });
         const data = await res.json();
-        return Array.isArray(data) ? data : [];
-      } catch (err) {
-        console.error('Fetch error:', err);
-        return null;
-      }
+        if (data.success) {
+          localStorage.setItem('liked_' + id, 'true');
+          btns.forEach(b => {
+            b.textContent = data.likes;
+            b.parentElement.classList.add('liked');
+          });
+        }
+      } catch (err) { }
     }
 
-    async function reload() {
-      const subs = await fetchSubmissions();
-      if (subs !== null) buildTrack(subs);
+    function animate() {
+      if (!isPaused) {
+        x -= speed;
+        if (x < -oneSetWidth) x += oneSetWidth;
+        if (x > 0) x -= oneSetWidth;
+      }
+
+      // Smooth jump interpolation
+      if (targetX !== null) {
+        x += (targetX - x) * 0.1;
+        if (Math.abs(targetX - x) < 1) {
+          x = targetX;
+          targetX = null;
+        }
+      }
+
+      trackEl.style.transform = `translateX(${x}px)`;
+      requestAnimationFrame(animate);
+    }
+
+    function jump(count) {
+      const step = getCardW() + getGap();
+      // targetX allows for a smooth JS transition instead of a snap
+      if (targetX === null) targetX = x;
+      targetX -= count * step;
     }
 
     (async () => {
-      await reload();
-      setInterval(reload, POLL_MS);
-      window.addEventListener('resize', () => {
-        // Rebuild on large resize to fix gap/shift
-      });
+      const data = await fetchSubmissions();
+      buildTrack(data);
+
+      document.getElementById('showWrapper').addEventListener('mouseenter', () => isPaused = true);
+      document.getElementById('showWrapper').addEventListener('mouseleave', () => isPaused = false);
+      // Mobile touch pausing
+      document.getElementById('showWrapper').addEventListener('touchstart', () => isPaused = true);
+      document.getElementById('showWrapper').addEventListener('touchend', () => isPaused = false);
     })();
   </script>
-
 </body>
 
 </html>
