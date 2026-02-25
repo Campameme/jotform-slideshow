@@ -280,9 +280,9 @@
 
         const img = document.createElement('img');
         img.className = 'card-img';
-        // Proxy through Netlify Function server-side to bypass Jotform CDN restrictions on mobile
+        // images.weserv.nl: free public CDN proxy — fetches server-side, bypasses all CDN restrictions
         img.src = imageUrl
-          ? '/.netlify/functions/proxy?url=' + encodeURIComponent(imageUrl)
+          ? `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl)}`
           : 'https://via.placeholder.com/380x384?text=Immagine';
         img.alt = name || 'Immagine';
         img.loading = 'lazy';
