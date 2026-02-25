@@ -338,33 +338,11 @@
       if (subs !== null) buildTrack(subs);
     }
 
-    // ── One-shot sync backfill (runs only once on page load) ────────────────────
-    // NOT on an interval — prevents re-adding submissions deleted from Jotform.
-    async function runSyncOnce() {
-      let offset = 0;
-      let hasMore = true;
-      while (hasMore) {
-        try {
-          const res = await fetch(`${SYNC_URL}?offset=${offset}&_=${Date.now()}`);
-          const data = await res.json();
-          console.log('Sync batch:', data);
-          hasMore = data.hasMore || false;
-          offset = data.nextOffset || 0;
-          if (data.processed > 0) await reload(); // show new images immediately
-        } catch (e) {
-          console.warn('Sync error:', e);
-          break;
-        }
-      }
-    }
-
     // ── Init ────────────────────────────────────────────────────────────────────
+    // The bin is the single source of truth. Webhook handles new submissions.
+    // Manual backfill: open /.netlify/functions/sync in browser if needed.
     (async () => {
-      // 1. Show existing images immediately
       await reload();
-      // 2. One-shot backfill in background (catches missed webhooks only)
-      runSyncOnce();
-      // 3. Re-shuffle and redraw every 30s for fresh random ordering
       setInterval(reload, POLL_MS);
     })();
   </script>
