@@ -4,8 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Galleria Slideshow</title>
-  <meta name="description" content="Slideshow infinito delle immagini inviate tramite Jotform" />
+  <title>Memefattori — Galleria</title>
+  <meta name="description" content="I vostri sanmemini in slideshow infinito" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet" />
@@ -28,7 +28,6 @@
       --card-w: 380px;
       --card-h: 480px;
       --gap: 28px;
-      --speed: 35s;
     }
 
     body {
@@ -44,7 +43,7 @@
     /* ── Header ── */
     header {
       text-align: center;
-      padding: 48px 24px 36px;
+      padding: 32px 24px 28px;
       position: relative;
     }
 
@@ -55,24 +54,24 @@
       height: 3px;
       background: linear-gradient(90deg, var(--accent), var(--accent2));
       border-radius: 2px;
-      margin: 20px auto 0;
+      margin: 16px auto 0;
     }
 
-    header h1 {
-      font-size: clamp(1.8rem, 4vw, 3rem);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, var(--text) 30%, var(--accent));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .header-logo {
+      height: 80px;
+      width: auto;
+      display: block;
+      margin: 0 auto;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 16px rgba(124, 111, 247, 0.35));
     }
 
     header p {
-      margin-top: 10px;
+      margin-top: 12px;
       color: var(--muted);
-      font-size: 1rem;
-      font-weight: 300;
+      font-size: 1.1rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
     }
 
     /* ── Slideshow container ── */
@@ -110,11 +109,11 @@
     .track {
       display: flex;
       gap: var(--gap);
-      animation: scroll var(--speed) linear infinite;
+      animation: scroll var(--speed, 35s) linear infinite;
       will-change: transform;
     }
 
-    /* Pause on hover only on devices that support true hover (not touch) */
+    /* Pause on hover only on real-hover devices (not touch) */
     @media (hover: hover) {
       .track:hover {
         animation-play-state: paused;
@@ -152,6 +151,22 @@
         box-shadow: 0 20px 60px rgba(124, 111, 247, 0.25);
         z-index: 5;
       }
+
+      .card:hover::after {
+        opacity: 1;
+      }
+    }
+
+    .card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      opacity: 0;
+      transition: opacity 0.3s;
     }
 
     .card-img {
@@ -182,23 +197,6 @@
       max-width: 100%;
     }
 
-    /* Glow accent line at bottom of card */
-    .card::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    .card:hover::after {
-      opacity: 1;
-    }
-
     /* ── Empty state ── */
     .empty-state {
       text-align: center;
@@ -223,48 +221,14 @@
       font-size: 0.95rem;
       line-height: 1.6;
     }
-
-    /* ── Status dot ── */
-    .status-bar {
-      text-align: center;
-      padding: 12px 24px 28px;
-      color: var(--muted);
-      font-size: 0.8rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent2);
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-
-      0%,
-      100% {
-        opacity: 1;
-        transform: scale(1);
-      }
-
-      50% {
-        opacity: 0.4;
-        transform: scale(0.8);
-      }
-    }
   </style>
 </head>
 
 <body>
 
   <header>
-    <h1>✨ Galleria</h1>
-    <p>Tutte le immagini inviate in tempo reale</p>
+    <img src="/logo.png" alt="Memefattori" class="header-logo" />
+    <p>I vostri sanmemini</p>
   </header>
 
   <div class="slideshow-wrapper" id="showWrapper">
@@ -276,21 +240,15 @@
     <!-- Track injected by JS -->
   </div>
 
-  <div class="status-bar">
-    <span class="dot"></span>
-    <span id="statusText">Caricamento in corso…</span>
-  </div>
-
   <script>
     const API_URL = '/.netlify/functions/submissions';
-    const POLL_INTERVAL = 30000; // 30 seconds
+    const POLL_INTERVAL = 30000;
     const CARD_W = 380;
     const GAP = 28;
 
     let currentCount = 0;
     let trackEl = null;
 
-    // ── Build / rebuild the track ──────────────────────────────────────────────
     function buildTrack(submissions) {
       const wrapper = document.getElementById('showWrapper');
       const empty = document.getElementById('emptyState');
@@ -298,28 +256,21 @@
       if (!submissions || submissions.length === 0) {
         empty.style.display = 'block';
         if (trackEl) { trackEl.remove(); trackEl = null; }
-        setStatus('Nessuna immagine ancora — aggiorno ogni 30 s');
         return;
       }
 
       empty.style.display = 'none';
 
-      // Duplicate cards enough to fill > 2× viewport width for seamless loop
       const minCopies = Math.ceil((window.innerWidth * 3) / ((CARD_W + GAP) * submissions.length)) + 2;
       const totalCopies = Math.max(minCopies, 4);
       const cards = Array.from({ length: totalCopies }, () => submissions).flat();
-
       const oneSetWidth = submissions.length * (CARD_W + GAP);
 
-      if (trackEl) { trackEl.remove(); }
+      if (trackEl) trackEl.remove();
 
       trackEl = document.createElement('div');
       trackEl.className = 'track';
-
-      // Set CSS variable for the animation shift (one full set)
       trackEl.style.setProperty('--track-shift', `-${oneSetWidth}px`);
-
-      // Adjust speed proportionally to number of items
       const speed = Math.max(submissions.length * 6, 20);
       trackEl.style.animationDuration = `${speed}s`;
 
@@ -329,21 +280,21 @@
 
         const img = document.createElement('img');
         img.className = 'card-img';
-        // Use direct URL with no-referrer to bypass Jotform CDN hotlink protection
-        img.src = imageUrl || 'https://via.placeholder.com/380x384?text=Immagine';
-        img.referrerPolicy = 'no-referrer';
+        // Proxy through Netlify Function server-side to bypass Jotform CDN restrictions on mobile
+        img.src = imageUrl
+          ? '/.netlify/functions/proxy?url=' + encodeURIComponent(imageUrl)
+          : 'https://via.placeholder.com/380x384?text=Immagine';
         img.alt = name || 'Immagine';
         img.loading = 'lazy';
         img.onerror = () => { img.src = 'https://via.placeholder.com/380x384?text=N%2FA'; };
 
         const info = document.createElement('div');
         info.className = 'card-info';
-
         const nameEl = document.createElement('div');
         nameEl.className = 'card-name';
         nameEl.textContent = name || '—';
-
         info.appendChild(nameEl);
+
         card.appendChild(img);
         card.appendChild(info);
         trackEl.appendChild(card);
@@ -351,10 +302,8 @@
 
       wrapper.appendChild(trackEl);
       currentCount = submissions.length;
-      setStatus(`${submissions.length} immagine${submissions.length !== 1 ? 'i' : ''} • aggiorno ogni 30 s`);
     }
 
-    // ── Fetch submissions from Netlify Function ──────────────────────────────
     async function fetchSubmissions() {
       try {
         const res = await fetch(API_URL);
@@ -367,33 +316,16 @@
       }
     }
 
-    function setStatus(msg) {
-      document.getElementById('statusText').textContent = msg;
-    }
-
-    // ── Poll loop ────────────────────────────────────────────────────────────
     async function refresh() {
       const submissions = await fetchSubmissions();
-      if (submissions === null) {
-        setStatus('Errore di connessione — riprovo tra 30 s');
-        return;
-      }
-      // Only rebuild DOM if count changed (new submissions)
-      if (submissions.length !== currentCount) {
+      if (submissions !== null && submissions.length !== currentCount) {
         buildTrack(submissions);
-      } else if (submissions.length > 0) {
-        setStatus(`${submissions.length} immagine${submissions.length !== 1 ? 'i' : ''} • aggiorno ogni 30 s`);
       }
     }
 
-    // ── Init ─────────────────────────────────────────────────────────────────
     (async () => {
       const submissions = await fetchSubmissions();
-      if (submissions !== null) {
-        buildTrack(submissions);
-      } else {
-        setStatus('Errore di connessione — riprovo tra 30 s');
-      }
+      if (submissions !== null) buildTrack(submissions);
       setInterval(refresh, POLL_INTERVAL);
     })();
   </script>
