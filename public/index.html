@@ -323,7 +323,7 @@
     // ── Fetch submissions ─────────────────────────────────────────────────────
     async function fetchSubmissions() {
       try {
-        const res = await fetch(API_URL);
+        const res = await fetch(`${API_URL}?_=${Date.now()}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         return Array.isArray(data) ? data : [];
