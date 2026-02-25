@@ -46,44 +46,56 @@ function extractFields(fields) {
   return { name, jotformUrl };
 }
 
-// ── Download image from Jotform CDN ──────────────────────────────────────────
-async function downloadImage(url) {
-  // Decode URL in case it contains %20 etc.
-  const decodedUrl = decodeURIComponent(url);
+// ── Download image from Jotform CDN (authenticated via API key) ──────────────
+async function downloadImage(jotformUrl, submissionId) {
+  const JOTFORM_API_KEY = process.env.JOTFORM_API_KEY;
 
-  // Try without Referer first (server-side CDN rules differ from browser)
-  const res = await fetch(decodedUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-    },
+  // Strategy 1: append apiKey to the CDN URL (works if Jotform supports it)
+  const urlWithKey = jotformUrl + (jotformUrl.includes('?') ? '&' : '?') + 'apiKey=' + JOTFORM_API_KEY;
+  console.log('Trying authenticated CDN URL…');
+  const res1 = await fetch(urlWithKey, {
+    headers: { 'User-Agent': 'Mozilla/5.0' },
     redirect: 'follow',
   });
+  const ct1 = res1.headers.get('content-type') || '';
+  console.log('Strategy 1 Content-Type:', ct1);
 
-  if (!res.ok) throw new Error(`Jotform CDN HTTP ${res.status}`);
-
-  const contentType = res.headers.get('content-type') || '';
-  console.log('Downloaded Content-Type:', contentType);
-
-  if (!contentType.startsWith('image/')) {
-    // Jotform returned HTML (auth redirect) — try with encoded URL as-is
-    const res2 = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
-      },
-      redirect: 'follow',
-    });
-    const ct2 = res2.headers.get('content-type') || '';
-    console.log('Retry Content-Type:', ct2);
-    if (!ct2.startsWith('image/')) {
-      throw new Error(`Jotform CDN returned non-image content: ${ct2}. The file URL may require Jotform authentication.`);
-    }
-    const buf2 = await res2.arrayBuffer();
-    return Buffer.from(buf2).toString('base64');
+  if (res1.ok && ct1.startsWith('image/')) {
+    const buf = await res1.arrayBuffer();
+    return Buffer.from(buf).toString('base64');
   }
 
-  const arrayBuffer = await res.arrayBuffer();
-  return Buffer.from(arrayBuffer).toString('base64');
+  // Strategy 2: use Jotform API to get submission file URL, then download
+  if (submissionId && JOTFORM_API_KEY) {
+    console.log('Trying Jotform API submission endpoint…');
+    const apiRes = await fetch(
+      `https://api.jotform.com/submission/${submissionId}?apiKey=${JOTFORM_API_KEY}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+    if (apiRes.ok) {
+      const apiJson = await apiRes.json();
+      // Find file URL in answers
+      const answers = apiJson.content && apiJson.content.answers ? apiJson.content.answers : {};
+      for (const ans of Object.values(answers)) {
+        if (ans.type === 'control_fileupload' && ans.answer) {
+          const fileUrl = Array.isArray(ans.answer) ? ans.answer[0] : ans.answer;
+          console.log('API file URL:', fileUrl);
+          const fileRes = await fetch(fileUrl + '?apiKey=' + JOTFORM_API_KEY, {
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            redirect: 'follow',
+          });
+          const fileCt = fileRes.headers.get('content-type') || '';
+          console.log('API file Content-Type:', fileCt);
+          if (fileRes.ok && fileCt.startsWith('image/')) {
+            const buf = await fileRes.arrayBuffer();
+            return Buffer.from(buf).toString('base64');
+          }
+        }
+      }
+    }
+  }
+
+  throw new Error(`Could not download image from Jotform. Content-Type was: ${ct1}`);
 }
 
 
@@ -149,15 +161,15 @@ exports.handler = async (event) => {
     }
 
     const { name, jotformUrl } = extractFields(fields);
-    console.log('Extracted → name:', name, '| jotformUrl:', jotformUrl);
+    const submissionId = fields.submissionID || null;
+    console.log('Extracted → name:', name, '| jotformUrl:', jotformUrl, '| submissionId:', submissionId);
 
     if (!jotformUrl) {
       return { statusCode: 400, body: JSON.stringify({ error: 'No image URL found in payload' }) };
     }
 
-    // Download from Jotform then upload to imgbb
     console.log('Downloading image from Jotform…');
-    const base64 = await downloadImage(jotformUrl);
+    const base64 = await downloadImage(jotformUrl, submissionId);
 
     console.log('Uploading to imgbb…');
     const imageUrl = await uploadToImgbb(base64);
