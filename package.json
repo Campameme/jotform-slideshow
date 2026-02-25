@@ -2,8 +2,12 @@
   "name": "jotform-slideshow",
   "version": "1.0.0",
   "description": "Jotform → Infinite Slideshow integration via Netlify Functions + JSONBin.io",
+  "scripts": {
+    "build": "echo 'no build step'"
+  },
   "dependencies": {
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "sharp": "^0.33.3"
   },
   "engines": {
     "node": ">=18"

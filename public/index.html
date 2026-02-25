@@ -331,13 +331,21 @@
       if (submissions !== null) buildTrack(submissions);
     }
 
-    // ── Sync: trigger backfill of missing Jotform submissions ────────────────
+    // ── Sync: backfill all missing Jotform submissions in batches ───────────────
     async function triggerSync() {
       try {
-        await fetch(SYNC_URL);
-        // After sync, reload to show any new images
-        await reload();
-      } catch (e) { /* silent */ }
+        let offset = 0;
+        let hasMore = true;
+        while (hasMore) {
+          const res = await fetch(`${SYNC_URL}?offset=${offset}`);
+          const data = await res.json();
+          console.log('Sync batch:', data);
+          hasMore = data.hasMore || false;
+          offset = data.nextOffset || 0;
+          if (data.processed > 0) await reload(); // show new images after each batch
+          if (!hasMore) break;
+        }
+      } catch (e) { console.warn('Sync error:', e); }
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────
