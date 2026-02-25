@@ -46,15 +46,46 @@ function extractFields(fields) {
   return { name, jotformUrl };
 }
 
-// ── Download image from Jotform CDN (server-side, no referrer issues) ────────
+// ── Download image from Jotform CDN ──────────────────────────────────────────
 async function downloadImage(url) {
-  const res = await fetch(url, {
-    headers: { 'Referer': 'https://www.jotform.com/', 'User-Agent': 'Mozilla/5.0' },
+  // Decode URL in case it contains %20 etc.
+  const decodedUrl = decodeURIComponent(url);
+
+  // Try without Referer first (server-side CDN rules differ from browser)
+  const res = await fetch(decodedUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    },
+    redirect: 'follow',
   });
-  if (!res.ok) throw new Error(`Jotform CDN returned ${res.status}`);
+
+  if (!res.ok) throw new Error(`Jotform CDN HTTP ${res.status}`);
+
+  const contentType = res.headers.get('content-type') || '';
+  console.log('Downloaded Content-Type:', contentType);
+
+  if (!contentType.startsWith('image/')) {
+    // Jotform returned HTML (auth redirect) — try with encoded URL as-is
+    const res2 = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+      },
+      redirect: 'follow',
+    });
+    const ct2 = res2.headers.get('content-type') || '';
+    console.log('Retry Content-Type:', ct2);
+    if (!ct2.startsWith('image/')) {
+      throw new Error(`Jotform CDN returned non-image content: ${ct2}. The file URL may require Jotform authentication.`);
+    }
+    const buf2 = await res2.arrayBuffer();
+    return Buffer.from(buf2).toString('base64');
+  }
+
   const arrayBuffer = await res.arrayBuffer();
   return Buffer.from(arrayBuffer).toString('base64');
 }
+
 
 // ── Upload base64 image to imgbb → returns permanent public URL ───────────────
 async function uploadToImgbb(base64Image) {
