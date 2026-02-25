@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
+  <meta name="referrer" content="no-referrer" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Memefattori — Galleria</title>
   <meta name="description" content="I vostri sanmemini in slideshow infinito" />
@@ -280,10 +281,8 @@
 
         const img = document.createElement('img');
         img.className = 'card-img';
-        // images.weserv.nl: free public CDN proxy — fetches server-side, bypasses all CDN restrictions
-        img.src = imageUrl
-          ? `https://images.weserv.nl/?url=${encodeURIComponent(imageUrl)}`
-          : 'https://via.placeholder.com/380x384?text=Immagine';
+        img.src = imageUrl || 'https://via.placeholder.com/380x384?text=Immagine';
+        img.setAttribute('referrerpolicy', 'no-referrer');
         img.alt = name || 'Immagine';
         img.loading = 'lazy';
         img.onerror = () => { img.src = 'https://via.placeholder.com/380x384?text=N%2FA'; };
