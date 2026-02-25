@@ -355,6 +355,7 @@
     let oneSetWidth = 0;
     let isPaused = false;
     let isJumping = false;
+    let lastDataString = "";
 
     function getCardW() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 380; }
     function getGap() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 32; }
@@ -376,8 +377,6 @@
       const cardW = getCardW();
       const gap = getGap();
       oneSetWidth = data.length * (cardW + gap);
-
-      // 4 sets total to have plenty of room for jumps
       const cards = Array.from({ length: 4 }, () => [...data]).flat();
 
       if (trackEl) trackEl.remove();
@@ -393,6 +392,7 @@
         const likeBtn = document.createElement('button');
         likeBtn.className = 'like-btn' + (isLiked ? ' liked' : '');
         likeBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span id="likes-${sub.submissionId}">${sub.likes || 0}</span>`;
+        if (isLiked) likeBtn.disabled = true;
         likeBtn.onclick = (e) => { e.stopPropagation(); toggleLike(sub.submissionId); };
         const blurImg = document.createElement('img');
         blurImg.className = 'card-img-blur';
@@ -413,49 +413,51 @@
       });
 
       wrapper.appendChild(trackEl);
-      // Start in the middle
-      x = -oneSetWidth;
-      requestAnimationFrame(animate);
+      if (x === 0) x = -oneSetWidth;
     }
 
     async function toggleLike(id) {
       if (localStorage.getItem('liked_' + id)) return;
+
       const btns = document.querySelectorAll(`[id="likes-${id}"]`);
       try {
-        const res = await fetch(LIKE_URL, { method: 'POST', body: JSON.stringify({ submissionId: id }) });
+        const res = await fetch(LIKE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ submissionId: id })
+        });
         const data = await res.json();
         if (data.success) {
           localStorage.setItem('liked_' + id, 'true');
-          btns.forEach(b => { b.textContent = data.likes; b.parentElement.classList.add('liked'); });
+          btns.forEach(b => {
+            b.textContent = data.likes;
+            b.parentElement.classList.add('liked');
+            b.parentElement.disabled = true;
+          });
         }
       } catch (err) { }
     }
 
     function animate() {
-      if (!isPaused && !isJumping) {
+      if (!isPaused && !isJumping && trackEl) {
         x -= speed;
-        // Keep in the safe range [-2*oneSetWidth, -oneSetWidth]
         if (x < -2 * oneSetWidth) x += oneSetWidth;
         if (x > -oneSetWidth) x -= oneSetWidth;
+        trackEl.style.transform = `translateX(${x}px)`;
       }
-      trackEl.style.transform = `translateX(${x}px)`;
       requestAnimationFrame(animate);
     }
 
     function jump(count) {
-      if (isJumping) return;
+      if (isJumping || !trackEl) return;
       isJumping = true;
       const step = getCardW() + getGap();
       const targetDelta = count * step;
-
-      // Use CSS transition for the manual jump
       trackEl.style.transition = 'transform 0.5s cubic-bezier(0.2, 0, 0.2, 1)';
       x -= targetDelta;
       trackEl.style.transform = `translateX(${x}px)`;
-
       setTimeout(() => {
         trackEl.style.transition = 'none';
-        // Normalize x after jump to keep in bounds
         while (x < -2 * oneSetWidth) x += oneSetWidth;
         while (x > -oneSetWidth) x -= oneSetWidth;
         trackEl.style.transform = `translateX(${x}px)`;
@@ -463,14 +465,27 @@
       }, 500);
     }
 
+    async function autoRefresh() {
+      const data = await fetchSubmissions();
+      if (!data || data.length === 0) return;
+      const currentString = JSON.stringify(data.map(s => ({ id: s.submissionId, likes: s.likes })));
+      if (currentString !== lastDataString) {
+        lastDataString = currentString;
+        buildTrack(data);
+      }
+    }
+
     (async () => {
       const data = await fetchSubmissions();
+      lastDataString = JSON.stringify(data.map(s => ({ id: s.submissionId, likes: s.likes })));
       buildTrack(data);
+      requestAnimationFrame(animate);
       const wrapper = document.getElementById('showWrapper');
       wrapper.addEventListener('mouseenter', () => isPaused = true);
       wrapper.addEventListener('mouseleave', () => isPaused = false);
       wrapper.addEventListener('touchstart', () => isPaused = true);
       wrapper.addEventListener('touchend', () => isPaused = false);
+      setInterval(autoRefresh, 30000); // Check every 30s
     })();
   </script>
 </body>
