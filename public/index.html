@@ -33,20 +33,20 @@
     @media (max-width: 600px) {
       :root {
         --card-w: 280px;
-        --card-h: 420px;
+        --card-h: 400px;
         --gap: 16px;
       }
 
       header {
-        padding: 24px 16px 20px;
+        padding: 15px 16px 10px;
       }
 
       .header-logo {
-        height: 60px;
+        height: 50px;
       }
 
       header p {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
       }
     }
 
@@ -62,22 +62,68 @@
 
     header {
       text-align: center;
-      padding: 30px 24px 20px;
+      padding: 25px 24px 15px;
       position: relative;
       z-index: 50;
     }
 
     .header-logo {
-      height: 80px;
+      height: 70px;
       filter: drop-shadow(0 4px 20px rgba(124, 111, 247, 0.4));
     }
 
     header p {
-      margin-top: 10px;
+      margin-top: 5px;
       color: var(--muted);
-      font-size: 1rem;
+      font-size: 0.9rem;
       text-transform: uppercase;
       letter-spacing: 0.1em;
+    }
+
+    /* ── Main Slideshow ── */
+    .slideshow-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      padding: 10px 0;
+    }
+
+    .track-container {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      padding: 20px 0;
+    }
+
+    .track-container::before,
+    .track-container::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 12vw;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .track-container::before {
+      left: 0;
+      background: linear-gradient(90deg, var(--bg) 10%, transparent);
+    }
+
+    .track-container::after {
+      right: 0;
+      background: linear-gradient(270deg, var(--bg) 10%, transparent);
+    }
+
+    .track {
+      display: flex;
+      gap: var(--gap);
+      padding-left: var(--gap);
+      will-change: transform;
     }
 
     /* ── Navigation Controls ── */
@@ -85,35 +131,26 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 16px;
-      padding-bottom: 50px;
+      gap: 12px;
+      padding: 10px 0;
       z-index: 100;
       position: relative;
     }
 
     .jump-group {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       background: rgba(19, 19, 26, 0.6);
-      padding: 8px 16px;
+      padding: 6px 12px;
       border-radius: 40px;
       border: 1px solid rgba(124, 111, 247, 0.2);
       backdrop-filter: blur(10px);
     }
 
-    .jump-label {
-      color: var(--muted);
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: -5px;
-    }
-
     .nav-btn {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
       background: var(--surface);
       border: 1px solid rgba(124, 111, 247, 0.3);
       color: var(--text);
@@ -123,18 +160,14 @@
       justify-content: center;
       cursor: pointer;
       transition: all 0.2s;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
     }
 
     .nav-btn:hover {
       background: var(--accent);
       color: white;
       border-color: transparent;
-      transform: translateY(-3px);
-    }
-
-    .nav-btn:active {
-      transform: translateY(0);
+      transform: translateY(-2px);
     }
 
     .nav-btn.forward {
@@ -145,54 +178,69 @@
       background: var(--accent2);
     }
 
-    @media (max-width: 600px) {
-      .controls-bar {
-        padding-bottom: 30px;
-      }
-
-      .nav-btn {
-        width: 38px;
-        height: 38px;
-        border-radius: 10px;
-      }
-    }
-
-    /* ── Slideshow ── */
-    .slideshow-wrapper {
-      flex: 1;
-      display: flex;
-      align-items: center;
+    /* ── Thumbnail Slider ── */
+    .thumb-nav {
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto 30px;
+      padding: 0 20px;
       position: relative;
-      overflow: hidden;
-      padding: 20px 0 30px;
     }
 
-    .slideshow-wrapper::before,
-    .slideshow-wrapper::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 12vw;
-      z-index: 10;
-      pointer-events: none;
+    .thumb-label {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 10px;
     }
 
-    .slideshow-wrapper::before {
-      left: 0;
-      background: linear-gradient(90deg, var(--bg) 10%, transparent);
-    }
-
-    .slideshow-wrapper::after {
-      right: 0;
-      background: linear-gradient(270deg, var(--bg) 10%, transparent);
-    }
-
-    .track {
+    .thumb-container {
       display: flex;
-      gap: var(--gap);
-      padding-left: var(--gap);
-      will-change: transform;
+      gap: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      /* Firefox */
+      padding: 10px 0;
+      scroll-behavior: smooth;
+    }
+
+    .thumb-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Safari/Chrome */
+
+    .thumb-item {
+      flex-shrink: 0;
+      width: 60px;
+      height: 80px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 2px solid transparent;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      opacity: 0.6;
+    }
+
+    .thumb-item:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    .thumb-item.active {
+      border-color: var(--accent);
+      opacity: 1;
+      transform: scale(1.1);
+      box-shadow: 0 0 15px var(--accent);
+    }
+
+    .thumb-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
     /* ── Cards ── */
@@ -209,11 +257,6 @@
       flex-direction: column;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
       transition: transform 0.3s, box-shadow 0.3s;
-    }
-
-    .card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 20px 50px rgba(124, 111, 247, 0.2);
     }
 
     .card-media {
@@ -250,7 +293,6 @@
       opacity: 1;
     }
 
-    /* ── Like Button ── */
     .like-btn {
       position: absolute;
       top: 15px;
@@ -269,11 +311,6 @@
       transition: all 0.2s;
     }
 
-    .like-btn:hover {
-      background: rgba(0, 0, 0, 0.7);
-      transform: scale(1.05);
-    }
-
     .like-btn.liked {
       background: rgba(239, 68, 68, 0.2);
       border-color: rgba(239, 68, 68, 0.5);
@@ -286,11 +323,6 @@
       fill: currentColor;
     }
 
-    .like-btn span {
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-
     .card-info {
       flex: 1;
       display: flex;
@@ -300,7 +332,7 @@
     }
 
     .card-name {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: var(--text);
       text-align: center;
@@ -311,7 +343,7 @@
 
     .empty-state {
       text-align: center;
-      padding: 100px 24px;
+      padding: 50px 24px;
       color: var(--muted);
       width: 100%;
     }
@@ -326,22 +358,28 @@
   </header>
 
   <div class="slideshow-wrapper" id="showWrapper">
-    <div class="empty-state" id="emptyState">
-      <h2>In caricamento...</h2>
+    <div class="track-container">
+      <div class="empty-state" id="emptyState">
+        <h2>In caricamento...</h2>
+      </div>
+    </div>
+
+    <div class="controls-bar">
+      <div class="jump-group">
+        <button class="nav-btn" onclick="jump(-5)">-5</button>
+        <button class="nav-btn" onclick="jump(-3)">-3</button>
+        <button class="nav-btn" onclick="jump(-1)">-1</button>
+        <span style="width: 10px;"></span>
+        <button class="nav-btn forward" onclick="jump(1)">+1</button>
+        <button class="nav-btn forward" onclick="jump(3)">+3</button>
+        <button class="nav-btn forward" onclick="jump(5)">+5</button>
+      </div>
     </div>
   </div>
 
-  <div class="controls-bar">
-    <div class="jump-label">Navigazione</div>
-    <div class="jump-group">
-      <button class="nav-btn" onclick="jump(-5)">-5</button>
-      <button class="nav-btn" onclick="jump(-3)">-3</button>
-      <button class="nav-btn" onclick="jump(-1)">-1</button>
-      <span style="width: 10px;"></span>
-      <button class="nav-btn forward" onclick="jump(1)">+1</button>
-      <button class="nav-btn forward" onclick="jump(3)">+3</button>
-      <button class="nav-btn forward" onclick="jump(5)">+5</button>
-    </div>
+  <div class="thumb-nav">
+    <div class="thumb-label">Tutte le opere (Max 30)</div>
+    <div class="thumb-container" id="thumbContainer"></div>
   </div>
 
   <script>
@@ -369,8 +407,10 @@
 
     function buildTrack(data) {
       submissions = data;
-      const wrapper = document.getElementById('showWrapper');
+      const container = document.querySelector('.track-container');
       const empty = document.getElementById('emptyState');
+      const thumbContainer = document.getElementById('thumbContainer');
+
       if (!data || data.length === 0) { empty.innerHTML = '<h2>Galleria vuota</h2>'; return; }
       empty.style.display = 'none';
 
@@ -383,9 +423,10 @@
       trackEl = document.createElement('div');
       trackEl.className = 'track';
 
-      cards.forEach((sub) => {
+      cards.forEach((sub, idx) => {
         const card = document.createElement('div');
         card.className = 'card';
+        card.id = `card-${idx}`;
         const media = document.createElement('div');
         media.className = 'card-media';
         const isLiked = localStorage.getItem('liked_' + sub.submissionId);
@@ -394,6 +435,7 @@
         likeBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span id="likes-${sub.submissionId}">${sub.likes || 0}</span>`;
         if (isLiked) likeBtn.disabled = true;
         likeBtn.onclick = (e) => { e.stopPropagation(); toggleLike(sub.submissionId); };
+
         const blurImg = document.createElement('img');
         blurImg.className = 'card-img-blur';
         blurImg.src = sub.imageUrl;
@@ -401,6 +443,7 @@
         img.className = 'card-img';
         img.src = sub.imageUrl;
         img.onload = () => img.classList.add('loaded');
+
         media.appendChild(blurImg); media.appendChild(img); media.appendChild(likeBtn);
         const info = document.createElement('div');
         info.className = 'card-info';
@@ -412,13 +455,44 @@
         trackEl.appendChild(card);
       });
 
-      wrapper.appendChild(trackEl);
+      container.appendChild(trackEl);
       if (x === 0) x = -oneSetWidth;
+
+      // Build Thumbnails (Max 30)
+      thumbContainer.innerHTML = '';
+      data.slice(0, 30).forEach((sub, i) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'thumb-item';
+        thumb.innerHTML = `<img src="${sub.imageUrl}" alt="thumb">`;
+        thumb.onclick = () => goToSubmission(i);
+        thumbContainer.appendChild(thumb);
+      });
+    }
+
+    function goToSubmission(index) {
+      if (isJumping) return;
+      const step = getCardW() + getGap();
+      // Target position: offset to middle set to be safe
+      const targetX = -(oneSetWidth + (index * step));
+
+      isJumping = true;
+      trackEl.style.transition = 'transform 0.8s cubic-bezier(0.2, 0, 0.2, 1)';
+      x = targetX;
+      trackEl.style.transform = `translateX(${x}px)`;
+
+      // Update active thumb
+      document.querySelectorAll('.thumb-item').forEach((t, i) => {
+        t.classList.toggle('active', i === index);
+      });
+
+      setTimeout(() => {
+        trackEl.style.transition = 'none';
+        isJumping = false;
+      }, 800);
     }
 
     async function toggleLike(id) {
       if (localStorage.getItem('liked_' + id)) return;
-
       const btns = document.querySelectorAll(`[id="likes-${id}"]`);
       try {
         const res = await fetch(LIKE_URL, {
@@ -485,7 +559,7 @@
       wrapper.addEventListener('mouseleave', () => isPaused = false);
       wrapper.addEventListener('touchstart', () => isPaused = true);
       wrapper.addEventListener('touchend', () => isPaused = false);
-      setInterval(autoRefresh, 30000); // Check every 30s
+      setInterval(autoRefresh, 30000);
     })();
   </script>
 </body>
