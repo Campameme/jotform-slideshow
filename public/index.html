@@ -181,53 +181,94 @@
     /* ── Thumbnail Slider ── */
     .thumb-nav {
       width: 100%;
-      max-width: 1000px;
+      max-width: 1200px;
       margin: 0 auto 30px;
-      padding: 0 20px;
+      padding: 0 50px;
       position: relative;
     }
 
     .thumb-label {
       text-align: center;
       color: var(--muted);
-      font-size: 0.7rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.1em;
       margin-bottom: 10px;
     }
 
+    .thumb-scroll-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
     .thumb-container {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       overflow-x: auto;
       scrollbar-width: none;
-      /* Firefox */
       padding: 10px 0;
       scroll-behavior: smooth;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .thumb-container:active {
+      cursor: grabbing;
     }
 
     .thumb-container::-webkit-scrollbar {
       display: none;
     }
 
-    /* Safari/Chrome */
+    .thumb-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      background: rgba(19, 19, 26, 0.9);
+      border: 1px solid rgba(124, 111, 247, 0.4);
+      border-radius: 10px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      transition: all 0.2s;
+      font-size: 1.2rem;
+    }
+
+    .thumb-arrow:hover {
+      background: var(--accent);
+      border-color: transparent;
+    }
+
+    .thumb-arrow.left {
+      left: -45px;
+    }
+
+    .thumb-arrow.right {
+      right: -45px;
+    }
 
     .thumb-item {
       flex-shrink: 0;
-      width: 60px;
-      height: 80px;
-      border-radius: 8px;
+      width: 65px;
+      height: 85px;
+      border-radius: 10px;
       background: var(--surface);
       border: 2px solid transparent;
       overflow: hidden;
       cursor: pointer;
       transition: all 0.2s;
-      opacity: 0.6;
+      opacity: 0.5;
     }
 
     .thumb-item:hover {
       opacity: 1;
-      transform: scale(1.1);
+      transform: scale(1.05);
     }
 
     .thumb-item.active {
@@ -241,6 +282,17 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      .thumb-nav {
+        padding: 0 10px;
+      }
+
+      .thumb-arrow {
+        display: none;
+      }
     }
 
     /* ── Cards ── */
@@ -257,6 +309,7 @@
       flex-direction: column;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
       transition: transform 0.3s, box-shadow 0.3s;
+      user-select: none;
     }
 
     .card-media {
@@ -265,6 +318,7 @@
       height: 80%;
       background: #000;
       overflow: hidden;
+      pointer-events: none;
     }
 
     .card-img-blur {
@@ -379,7 +433,11 @@
 
   <div class="thumb-nav">
     <div class="thumb-label">Opere</div>
-    <div class="thumb-container" id="thumbContainer"></div>
+    <div class="thumb-scroll-wrapper">
+      <button class="thumb-arrow left" onclick="scrollThumbs(-1)">&#8249;</button>
+      <div class="thumb-container" id="thumbContainer"></div>
+      <button class="thumb-arrow right" onclick="scrollThumbs(1)">&#8250;</button>
+    </div>
   </div>
 
   <script>
@@ -394,6 +452,11 @@
     let isPaused = false;
     let isJumping = false;
     let lastDataString = "";
+
+    // Swipe/Drag State
+    let isDragging = false;
+    let startXPx = 0;
+    let dragStartX = 0;
 
     function getCardW() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 380; }
     function getGap() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 32; }
@@ -469,6 +532,11 @@
       });
     }
 
+    function scrollThumbs(dir) {
+      const container = document.getElementById('thumbContainer');
+      container.scrollLeft += dir * 250;
+    }
+
     function goToSubmission(index) {
       if (isJumping) return;
       const step = getCardW() + getGap();
@@ -513,7 +581,7 @@
     }
 
     function animate() {
-      if (!isPaused && !isJumping && trackEl) {
+      if (!isPaused && !isJumping && !isDragging && trackEl) {
         x -= speed;
         if (x < -2 * oneSetWidth) x += oneSetWidth;
         if (x > -oneSetWidth) x -= oneSetWidth;
@@ -539,6 +607,39 @@
       }, 500);
     }
 
+    // Drag / Swipe Logic
+    function handleStart(e) {
+      if (isJumping) return;
+      isDragging = true;
+      isPaused = true;
+      startXPx = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+      dragStartX = x;
+      if (trackEl) trackEl.style.transition = 'none';
+      if (!e.type.includes('touch')) e.preventDefault(); // Prevent text selection
+    }
+
+    function handleMove(e) {
+      if (!isDragging) return;
+      const currentXPx = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+      const delta = (currentXPx - startXPx) * 1.5; // Sensitivity
+      x = dragStartX + delta;
+
+      // Infinite loop normalization during drag
+      if (x < -2 * oneSetWidth) { dragStartX += oneSetWidth; x += oneSetWidth; startXPx = currentXPx; }
+      if (x > -oneSetWidth) { dragStartX -= oneSetWidth; x -= oneSetWidth; startXPx = currentXPx; }
+
+      if (trackEl) trackEl.style.transform = `translateX(${x}px)`;
+
+      // Prevent page scroll during horizontal swipe
+      if (Math.abs(delta) > 10 && e.cancelable) e.preventDefault();
+    }
+
+    function handleEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      isPaused = false;
+    }
+
     async function autoRefresh() {
       const data = await fetchSubmissions();
       if (!data || data.length === 0) return;
@@ -554,11 +655,22 @@
       lastDataString = JSON.stringify(data.map(s => ({ id: s.submissionId, likes: s.likes })));
       buildTrack(data);
       requestAnimationFrame(animate);
+
       const wrapper = document.getElementById('showWrapper');
-      wrapper.addEventListener('mouseenter', () => isPaused = true);
-      wrapper.addEventListener('mouseleave', () => isPaused = false);
-      wrapper.addEventListener('touchstart', () => isPaused = true);
-      wrapper.addEventListener('touchend', () => isPaused = false);
+
+      // Mouse dragging
+      wrapper.addEventListener('mousedown', handleStart);
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleEnd);
+
+      // Touch swiping
+      wrapper.addEventListener('touchstart', handleStart, { passive: true });
+      window.addEventListener('touchmove', handleMove, { passive: false });
+      window.addEventListener('touchend', handleEnd);
+
+      wrapper.addEventListener('mouseenter', () => { if (!isDragging) isPaused = true; });
+      wrapper.addEventListener('mouseleave', () => { if (!isDragging) isPaused = false; });
+
       setInterval(autoRefresh, 30000);
     })();
   </script>
