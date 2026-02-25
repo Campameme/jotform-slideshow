@@ -27,8 +27,28 @@
       --text: #f0f0f8;
       --muted: #8888aa;
       --card-w: 380px;
-      --card-h: 480px;
-      --gap: 28px;
+      --card-h: 500px;
+      --gap: 32px;
+    }
+
+    @media (max-width: 600px) {
+      :root {
+        --card-w: 280px;
+        --card-h: 380px;
+        --gap: 20px;
+      }
+
+      header {
+        padding: 24px 16px 20px;
+      }
+
+      .header-logo {
+        height: 60px;
+      }
+
+      header p {
+        font-size: 0.95rem;
+      }
     }
 
     body {
@@ -44,14 +64,15 @@
     /* ── Header ── */
     header {
       text-align: center;
-      padding: 32px 24px 28px;
+      padding: 40px 24px 32px;
       position: relative;
+      z-index: 20;
     }
 
     header::after {
       content: '';
       display: block;
-      width: 80px;
+      width: 60px;
       height: 3px;
       background: linear-gradient(90deg, var(--accent), var(--accent2));
       border-radius: 2px;
@@ -59,20 +80,21 @@
     }
 
     .header-logo {
-      height: 80px;
+      height: 90px;
       width: auto;
       display: block;
       margin: 0 auto;
       object-fit: contain;
-      filter: drop-shadow(0 4px 16px rgba(124, 111, 247, 0.35));
+      filter: drop-shadow(0 4px 20px rgba(124, 111, 247, 0.4));
     }
 
     header p {
-      margin-top: 12px;
+      margin-top: 14px;
       color: var(--muted);
       font-size: 1.1rem;
       font-weight: 400;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
 
     /* ── Slideshow container ── */
@@ -81,7 +103,7 @@
       overflow: hidden;
       display: flex;
       align-items: center;
-      padding: 20px 0 40px;
+      padding: 0 0 60px;
       position: relative;
     }
 
@@ -91,7 +113,7 @@
       position: absolute;
       top: 0;
       bottom: 0;
-      width: 120px;
+      width: 15vw;
       z-index: 10;
       pointer-events: none;
     }
@@ -112,6 +134,7 @@
       animation: scroll linear infinite;
       animation-duration: var(--speed, 35s);
       will-change: transform;
+      padding-left: var(--gap);
     }
 
     @media (hover: hover) {
@@ -136,65 +159,82 @@
       width: var(--card-w);
       height: var(--card-h);
       background: var(--surface);
-      border-radius: 20px;
+      border-radius: 24px;
       overflow: hidden;
-      border: 1px solid rgba(124, 111, 247, 0.15);
-      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.45);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border: 1px solid rgba(124, 111, 247, 0.12);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
       position: relative;
       cursor: default;
+      display: flex;
+      flex-direction: column;
     }
 
     @media (hover: hover) {
       .card:hover {
-        transform: translateY(-6px) scale(1.02);
-        box-shadow: 0 20px 60px rgba(124, 111, 247, 0.25);
+        transform: translateY(-10px) scale(1.03);
+        box-shadow: 0 25px 70px rgba(124, 111, 247, 0.3);
         z-index: 5;
-      }
-
-      .card:hover::after {
-        opacity: 1;
+        border-color: rgba(124, 111, 247, 0.4);
       }
     }
 
-    .card::after {
-      content: '';
+    .card-media {
+      position: relative;
+      width: 100%;
+      height: 82%;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .card-img-blur {
       position: absolute;
-      bottom: 0;
+      top: 0;
       left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      opacity: 0;
-      transition: opacity 0.3s;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: blur(25px) brightness(0.6);
+      opacity: 0.5;
+      transform: scale(1.2);
+      pointer-events: none;
     }
 
     .card-img {
+      position: relative;
+      z-index: 2;
       width: 100%;
-      height: 80%;
-      object-fit: cover;
+      height: 100%;
+      object-fit: contain;
       display: block;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+
+    .card-img.loaded {
+      opacity: 1;
     }
 
     .card-info {
-      height: 20%;
+      flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0 16px;
-      background: linear-gradient(180deg, rgba(19, 19, 26, 0) 0%, var(--surface) 40%);
+      padding: 0 20px;
+      background: linear-gradient(180deg, rgba(19, 19, 26, 0) 0%, var(--surface) 20%);
     }
 
     .card-name {
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-size: 1.15rem;
+      font-weight: 700;
       color: var(--text);
       text-align: center;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.03em;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 100%;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
     }
 
     /* ── Empty state ── */
@@ -207,18 +247,18 @@
 
     .empty-state .icon {
       font-size: 4rem;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
     }
 
     .empty-state h2 {
-      font-size: 1.4rem;
+      font-size: 1.6rem;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       color: var(--text);
     }
 
     .empty-state p {
-      font-size: 0.95rem;
+      font-size: 1rem;
       line-height: 1.6;
     }
   </style>
@@ -228,7 +268,7 @@
 
   <header>
     <img src="/logo.png" alt="Memefattori" class="header-logo" />
-    <p>I vostri sanmemini</p>
+    <p>Sanmemini Slideshow</p>
   </header>
 
   <div class="slideshow-wrapper" id="showWrapper">
@@ -241,10 +281,15 @@
 
   <script>
     const API_URL = '/.netlify/functions/submissions';
-    const SYNC_URL = '/.netlify/functions/sync';
-    const POLL_MS = 30000; // re-shuffle + redraw every 30s
-    const CARD_W = 380;
-    const GAP = 28;
+    const POLL_MS = 60000; // reload every 1 min
+
+    // Config values are now CSS variables, but we need them for JS calculation
+    function getCardW() {
+      return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 380;
+    }
+    function getGap() {
+      return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 32;
+    }
 
     let trackEl = null;
 
@@ -259,8 +304,6 @@
     }
 
     // ── Build seamless fair-shuffle track ───────────────────────────────────────
-    // RULE: all copies of the track must use the SAME shuffle order so the CSS
-    // animation loop is seamless AND each image is seen once before any repeats.
     function buildTrack(submissions) {
       const wrapper = document.getElementById('showWrapper');
       const empty = document.getElementById('emptyState');
@@ -273,36 +316,48 @@
 
       empty.style.display = 'none';
 
-      // One canonical shuffle per build cycle
+      const cardW = getCardW();
+      const gap = getGap();
       const ordered = shuffle(submissions);
-      const oneSetWidth = ordered.length * (CARD_W + GAP);
+      const oneSetWidth = ordered.length * (cardW + gap);
 
-      // How many identical copies to fill 3x the screen width (ensures no gap)
       const minCopies = Math.ceil((window.innerWidth * 3) / oneSetWidth) + 2;
       const totalCopies = Math.max(minCopies, 3);
-
-      // ALL copies are IDENTICAL — seamless CSS loop, fair ordering guaranteed
       const cards = Array.from({ length: totalCopies }, () => [...ordered]).flat();
 
       if (trackEl) trackEl.remove();
 
       trackEl = document.createElement('div');
       trackEl.className = 'track';
-      // Shift exactly oneSetWidth → animation loops back to identical start
       trackEl.style.setProperty('--track-shift', `-${oneSetWidth}px`);
-      trackEl.style.setProperty('--speed', `${Math.max(ordered.length * 7, 20)}s`);
+      trackEl.style.setProperty('--speed', `${Math.max(ordered.length * 8, 25)}s`);
 
       cards.forEach(({ name, imageUrl }) => {
         const card = document.createElement('div');
         card.className = 'card';
 
+        const media = document.createElement('div');
+        media.className = 'card-media';
+
+        // Background blur layer
+        const blurImg = document.createElement('img');
+        blurImg.className = 'card-img-blur';
+        blurImg.src = imageUrl;
+        blurImg.alt = '';
+        blurImg.setAttribute('referrerpolicy', 'no-referrer');
+
+        // Main image layer
         const img = document.createElement('img');
         img.className = 'card-img';
         img.src = imageUrl || 'https://via.placeholder.com/380x384?text=Immagine';
         img.setAttribute('referrerpolicy', 'no-referrer');
         img.alt = name || 'Immagine';
         img.loading = 'lazy';
+        img.onload = () => img.classList.add('loaded');
         img.onerror = () => { img.src = 'https://via.placeholder.com/380x384?text=N%2FA'; };
+
+        media.appendChild(blurImg);
+        media.appendChild(img);
 
         const info = document.createElement('div');
         info.className = 'card-info';
@@ -311,7 +366,7 @@
         nameEl.textContent = name || '—';
         info.appendChild(nameEl);
 
-        card.appendChild(img);
+        card.appendChild(media);
         card.appendChild(info);
         trackEl.appendChild(card);
       });
@@ -319,7 +374,7 @@
       wrapper.appendChild(trackEl);
     }
 
-    // ── Fetch (always cache-busted) ─────────────────────────────────────────────
+    // ── Fetch (cache-busted) ────────────────────────────────────────────────────
     async function fetchSubmissions() {
       try {
         const res = await fetch(`${API_URL}?_=${Date.now()}`);
@@ -332,18 +387,17 @@
       }
     }
 
-    // ── Reload: fresh fetch + new shuffle ──────────────────────────────────────
     async function reload() {
       const subs = await fetchSubmissions();
       if (subs !== null) buildTrack(subs);
     }
 
-    // ── Init ────────────────────────────────────────────────────────────────────
-    // The bin is the single source of truth. Webhook handles new submissions.
-    // Manual backfill: open /.netlify/functions/sync in browser if needed.
     (async () => {
       await reload();
       setInterval(reload, POLL_MS);
+      window.addEventListener('resize', () => {
+        // Rebuild on large resize to fix gap/shift
+      });
     })();
   </script>
 
