@@ -1,15 +1,14 @@
 // netlify/functions/webhook.js
-// Receives Jotform webhook POST (multipart/form-data) and stores submission in JSONBin.io
+// Receives Jotform webhook, downloads image, re-uploads to imgbb (permanent CDN), saves to JSONBin
 
 const fetch = require('node-fetch');
 
 const JSONBIN_API_KEY = process.env.JSONBIN_API_KEY;
 const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID;
+const IMGBB_API_KEY = process.env.IMGBB_API_KEY;
 const JSONBIN_BASE = 'https://api.jsonbin.io/v3';
 
-/**
- * Decode body: Netlify may base64-encode binary bodies.
- */
+// ── Decode body (Netlify may base64-encode binary bodies) ─────────────────────
 function decodeBody(event) {
   if (event.isBase64Encoded && event.body) {
     return Buffer.from(event.body, 'base64').toString('utf-8');
@@ -17,173 +16,131 @@ function decodeBody(event) {
   return event.body || '';
 }
 
-/**
- * Parse multipart/form-data into a plain key→value object.
- * Only handles text parts (skips binary file parts).
- */
+// ── Parse multipart/form-data into key→value map ─────────────────────────────
 function parseMultipart(body, boundary) {
   const fields = {};
-  const delimiter = '--' + boundary;
-  const parts = body.split(delimiter);
-
+  const parts = body.split('--' + boundary);
   for (const part of parts) {
-    if (!part || part === '--\r\n' || part.trim() === '--') continue;
-
-    const headerBodySplit = part.indexOf('\r\n\r\n');
-    if (headerBodySplit === -1) continue;
-
-    const headers = part.substring(0, headerBodySplit);
-    // Remove trailing \r\n from value
-    const value = part.substring(headerBodySplit + 4).replace(/\r\n$/, '');
-
+    if (!part || part.trim() === '--') continue;
+    const split = part.indexOf('\r\n\r\n');
+    if (split === -1) continue;
+    const headers = part.substring(0, split);
+    const value = part.substring(split + 4).replace(/\r\n$/, '');
     const nameMatch = headers.match(/name="([^"]+)"/);
-    if (nameMatch) {
-      fields[nameMatch[1]] = value;
-    }
+    if (nameMatch) fields[nameMatch[1]] = value;
   }
   return fields;
 }
 
-/**
- * Extract name + imageUrl from the parsed multipart fields.
- *
- * Jotform multipart payload includes a `rawRequest` field which is a JSON
- * string containing all form answers + resolved file URLs.
- * Structure (from real log):
- * {
- *   "q3_nomePagina": "tonypitony",
- *   "caricaFile": ["https://eu.jotform.com/uploads/.../logo scritta.png"],
- *   ...
- * }
- */
-function extractSubmission(fields) {
-  console.log('Multipart field keys:', Object.keys(fields));
-
-  // Parse rawRequest JSON (contains resolved file URLs)
+// ── Extract name + Jotform image URL from parsed fields ──────────────────────
+function extractFields(fields) {
   let raw = {};
   if (fields.rawRequest) {
-    try {
-      raw = JSON.parse(fields.rawRequest);
-      console.log('rawRequest keys:', Object.keys(raw));
-    } catch (e) {
-      console.error('Failed to parse rawRequest JSON:', e.message);
-    }
+    try { raw = JSON.parse(fields.rawRequest); } catch (e) { }
   }
-
-  // ── Extract name ──────────────────────────────────────────────────────────
-  // q3_nomePagina is directly in rawRequest
-  const name = raw.q3_nomePagina
-    || fields.q3_nomePagina
-    || extractFromPretty(fields.pretty, 'Nome pagina')
-    || null;
-
-  // ── Extract image URL ──────────────────────────────────────────────────────
-  // Jotform puts resolved CDN URLs in rawRequest.caricaFile (array)
-  let imageUrl = null;
+  const name = raw.q3_nomePagina || fields.q3_nomePagina || null;
+  let jotformUrl = null;
   if (raw.caricaFile && Array.isArray(raw.caricaFile) && raw.caricaFile.length > 0) {
-    imageUrl = raw.caricaFile[0];
-  } else if (raw.q4_caricaFile && Array.isArray(raw.q4_caricaFile)) {
-    imageUrl = raw.q4_caricaFile[0];
-  } else {
-    // Fallback: scan fields for anything that looks like a CDN URL
-    for (const val of Object.values(fields)) {
-      if (typeof val === 'string' && val.includes('jotform.com/uploads')) {
-        imageUrl = val;
-        break;
-      }
-    }
+    jotformUrl = raw.caricaFile[0];
   }
-
-  console.log('Extracted → name:', name, '| imageUrl:', imageUrl);
-  return { name, imageUrl, timestamp: new Date().toISOString() };
+  return { name, jotformUrl };
 }
 
-function extractFromPretty(pretty, label) {
-  if (!pretty) return null;
-  const re = new RegExp(label + ':([^,\\n]+)', 'i');
-  const m = pretty.match(re);
-  return m ? m[1].trim() : null;
+// ── Download image from Jotform CDN (server-side, no referrer issues) ────────
+async function downloadImage(url) {
+  const res = await fetch(url, {
+    headers: { 'Referer': 'https://www.jotform.com/', 'User-Agent': 'Mozilla/5.0' },
+  });
+  if (!res.ok) throw new Error(`Jotform CDN returned ${res.status}`);
+  const arrayBuffer = await res.arrayBuffer();
+  return Buffer.from(arrayBuffer).toString('base64');
 }
 
+// ── Upload base64 image to imgbb → returns permanent public URL ───────────────
+async function uploadToImgbb(base64Image) {
+  const body = new URLSearchParams();
+  body.append('key', IMGBB_API_KEY);
+  body.append('image', base64Image);
+
+  const res = await fetch('https://api.imgbb.com/1/upload', {
+    method: 'POST',
+    body,
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(`imgbb upload failed: ${JSON.stringify(json)}`);
+  }
+  return json.data.url; // permanent public URL
+}
+
+// ── JSONBin helpers ───────────────────────────────────────────────────────────
+async function getBin() {
+  const res = await fetch(`${JSONBIN_BASE}/b/${JSONBIN_BIN_ID}/latest`, {
+    headers: { 'X-Master-Key': JSONBIN_API_KEY, 'X-Bin-Meta': 'false' },
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data.filter(s => !s.init) : [];
+}
+
+async function updateBin(submissions) {
+  const res = await fetch(`${JSONBIN_BASE}/b/${JSONBIN_BIN_ID}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
+    body: JSON.stringify(submissions),
+  });
+  return res.ok;
+}
+
+// ── Handler ───────────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
-  // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: corsHeaders(), body: '' };
+    return { statusCode: 200, body: '' };
   }
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   try {
+    // Parse multipart payload from Jotform
     const body = decodeBody(event);
     const contentType = event.headers['content-type'] || '';
-    console.log('Content-Type:', contentType);
-
     let fields = {};
 
     if (contentType.includes('multipart/form-data')) {
-      const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
-      if (!boundaryMatch) {
-        return { statusCode: 400, body: 'Missing multipart boundary' };
-      }
-      fields = parseMultipart(body, boundaryMatch[1]);
+      const m = contentType.match(/boundary=([^\s;]+)/);
+      if (m) fields = parseMultipart(body, m[1]);
     } else if (contentType.includes('application/json')) {
       fields = JSON.parse(body);
     } else {
-      // form-urlencoded fallback
       const params = new URLSearchParams(body);
-      for (const [key, value] of params.entries()) {
-        fields[key] = value;
-      }
+      for (const [k, v] of params.entries()) fields[k] = v;
     }
 
-    const submission = extractSubmission(fields);
+    const { name, jotformUrl } = extractFields(fields);
+    console.log('Extracted → name:', name, '| jotformUrl:', jotformUrl);
 
-    if (!submission.name && !submission.imageUrl) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Could not extract name or imageUrl', fields: Object.keys(fields) }),
-      };
+    if (!jotformUrl) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'No image URL found in payload' }) };
     }
 
-    // Read current bin
-    const getRes = await fetch(`${JSONBIN_BASE}/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_API_KEY, 'X-Bin-Meta': 'false' },
-    });
+    // Download from Jotform then upload to imgbb
+    console.log('Downloading image from Jotform…');
+    const base64 = await downloadImage(jotformUrl);
 
-    let submissions = [];
-    if (getRes.ok) {
-      const json = await getRes.json();
-      submissions = Array.isArray(json) ? json.filter(s => !s.init) : [];
-    }
+    console.log('Uploading to imgbb…');
+    const imageUrl = await uploadToImgbb(base64);
+    console.log('imgbb URL:', imageUrl);
 
-    submissions.unshift(submission);
+    // Save to JSONBin
+    const submissions = await getBin();
+    submissions.unshift({ name, imageUrl, timestamp: new Date().toISOString() });
+    await updateBin(submissions);
 
-    // Update bin
-    const putRes = await fetch(`${JSONBIN_BASE}/b/${JSONBIN_BIN_ID}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
-      body: JSON.stringify(submissions),
-    });
-
-    if (!putRes.ok) {
-      const errText = await putRes.text();
-      console.error('JSONBin PUT error:', errText);
-      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to save', detail: errText }) };
-    }
-
-    return { statusCode: 200, body: JSON.stringify({ success: true, submission }) };
+    return { statusCode: 200, body: JSON.stringify({ success: true, imageUrl }) };
 
   } catch (err) {
     console.error('Webhook error:', err);
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };
-
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  };
-}
