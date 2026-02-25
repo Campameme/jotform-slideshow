@@ -52,20 +52,39 @@ exports.handler = async (event) => {
         const offset = parseInt(params.offset || '0', 10);
         const limit = parseInt(params.limit || String(BATCH_SIZE), 10);
 
+        // 1. Fetch current data from both sources
         const existing = await getBin();
-        const existingIds = new Set(existing.map(s => s.submissionId).filter(Boolean));
-
         const jotformSubs = await getJotformSubmissions();
-        console.log(`Jotform submissions: ${jotformSubs.length}, already saved: ${existing.length}, querying offset=${offset}`);
 
-        // Filter to only missing submissions
-        const missing = jotformSubs.filter(sub => !existingIds.has(sub.id));
-        console.log(`Missing (not yet in bin): ${missing.length}`);
+        // 2. PRUNE: Remove submissions from JSONBin that are no longer ACTIVE in Jotform
+        const activeJotformIds = new Set(jotformSubs.filter(s => s.status === 'ACTIVE').map(s => s.id));
+        const pruned = existing.filter(s => {
+            if (!s.submissionId) return true; // keep init or legacy items without ID
+            return activeJotformIds.has(s.submissionId);
+        });
+
+        const removedCount = existing.length - pruned.length;
+        if (removedCount > 0) {
+            console.log(`Pruning: removing ${removedCount} stale submissions from JSONBin`);
+            await updateBin(pruned);
+        }
+
+        // 3. ADD MISSING: Continue with existing logic to add new active submissions
+        const existingIds = new Set(pruned.map(s => s.submissionId).filter(Boolean));
+        console.log(`Jotform submissions: ${jotformSubs.length}, active in bin: ${pruned.length}, querying offset=${offset}`);
+
+        // Filter to only missing AND active submissions
+        const missing = jotformSubs.filter(sub => {
+            const isActive = sub.status === 'ACTIVE';
+            const isMissing = !existingIds.has(sub.id);
+            return isActive && isMissing;
+        });
+        console.log(`Missing and Active (to be added): ${missing.length}`);
 
         const batch = missing.slice(offset, offset + limit);
         const hasMore = offset + limit < missing.length;
 
-        const results = { processed: 0, failed: 0, errors: [] };
+        const results = { processed: 0, failed: 0, errors: [], removed: removedCount };
         const newEntries = [];
 
         for (const sub of batch) {
@@ -93,7 +112,7 @@ exports.handler = async (event) => {
         }
 
         if (newEntries.length > 0) {
-            // Re-fetch bin in case another request updated it, then merge
+            // Re-fetch bin to get latest (including possible recent pruning)
             const latestBin = await getBin();
             const latestIds = new Set(latestBin.map(s => s.submissionId).filter(Boolean));
             const toAdd = newEntries.filter(e => !latestIds.has(e.submissionId));
