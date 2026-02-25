@@ -35,12 +35,12 @@ async function updateBin(submissions) {
 }
 
 async function getJotformSubmissions() {
-    // Account is on EU server — must use api.eu.jotform.com
-    const url = `https://eu-api.jotform.com/form/${JOTFORM_FORM_ID}/submissions?apiKey=${JOTFORM_API_KEY}&limit=1000&orderby=created_at`;
+    // Add cache buster to avoid edge caching
+    const url = `https://eu-api.jotform.com/form/${JOTFORM_FORM_ID}/submissions?apiKey=${JOTFORM_API_KEY}&limit=1000&orderby=created_at&cb=${Date.now()}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Jotform API ${res.status}`);
     const json = await res.json();
-    console.log('Jotform API response code:', json.responseCode, '| count:', json.resultSet && json.resultSet.count);
+    console.log('Jotform API response:', json.responseCode, '| count:', json.resultSet && json.resultSet.count);
     return json.content || [];
 }
 
@@ -52,38 +52,45 @@ exports.handler = async (event) => {
         const offset = parseInt(params.offset || '0', 10);
         const limit = parseInt(params.limit || String(BATCH_SIZE), 10);
 
-        // 1. Fetch current data from both sources
-        const existing = await getBin();
+        // 1. Fetch current data
+        const existingEntries = await getBin();
         const jotformSubs = await getJotformSubmissions();
 
-        // 2. PRUNE: Remove submissions from JSONBin that are no longer ACTIVE in Jotform
-        const activeJotformIds = new Set(jotformSubs.filter(s => s.status === 'ACTIVE').map(s => s.id));
-        const pruned = existing.filter(s => {
-            if (!s.submissionId) return true; // keep init or legacy items without ID
-            return activeJotformIds.has(s.submissionId);
+        // 2. Identify Active Jotform Submissions (Case-insensitive check)
+        const activeJotformMap = new Map();
+        jotformSubs.forEach(sub => {
+            const status = String(sub.status || '').toUpperCase();
+            if (status === 'ACTIVE') {
+                activeJotformMap.set(sub.id, sub);
+            }
         });
 
-        const removedCount = existing.length - pruned.length;
-        if (removedCount > 0) {
-            console.log(`Pruning: removing ${removedCount} stale submissions from JSONBin`);
-            await updateBin(pruned);
-        }
+        console.log(`Jotform: ${jotformSubs.length} total, ${activeJotformMap.size} active.`);
 
-        // 3. ADD MISSING: Continue with existing logic to add new active submissions
-        const existingIds = new Set(pruned.map(s => s.submissionId).filter(Boolean));
-        console.log(`Jotform submissions: ${jotformSubs.length}, active in bin: ${pruned.length}, querying offset=${offset}`);
-
-        // Filter to only missing AND active submissions
-        const missing = jotformSubs.filter(sub => {
-            const isActive = sub.status === 'ACTIVE';
-            const isMissing = !existingIds.has(sub.id);
-            return isActive && isMissing;
+        // 3. PRUNE: Identify entries in JSONBin that are no longer ACTIVE in Jotform
+        const prunedEntries = existingEntries.filter(entry => {
+            if (!entry.submissionId) return true; // Keep metadata/header items if any
+            const stillActive = activeJotformMap.has(entry.submissionId);
+            if (!stillActive) console.log(`Pruning stale submission: ${entry.submissionId}`);
+            return stillActive;
         });
-        console.log(`Missing and Active (to be added): ${missing.length}`);
 
-        const batch = missing.slice(offset, offset + limit);
-        const hasMore = offset + limit < missing.length;
+        const removedCount = existingEntries.length - prunedEntries.length;
+        const currentIdsInBin = new Set(prunedEntries.map(e => e.submissionId).filter(Boolean));
 
+        // 4. IDENTIFY MISSING: Active on Jotform but not in Bin
+        const missingFromBin = [];
+        jotformSubs.forEach(sub => {
+            if (String(sub.status).toUpperCase() === 'ACTIVE' && !currentIdsInBin.has(sub.id)) {
+                missingFromBin.push(sub);
+            }
+        });
+
+        console.log(`Summary: ${prunedEntries.length} entries kept, ${removedCount} removed, ${missingFromBin.length} missing and to be added.`);
+
+        // 5. PROCESS BATCH
+        const batch = missingFromBin.slice(offset, offset + limit);
+        const hasMore = offset + limit < missingFromBin.length;
         const results = { processed: 0, failed: 0, errors: [], removed: removedCount };
         const newEntries = [];
 
@@ -97,26 +104,44 @@ exports.handler = async (event) => {
                 if (!fileUrl && ans.type === 'control_fileupload' && ans.answer) fileUrl = Array.isArray(ans.answer) ? ans.answer[0] : ans.answer;
             }
 
-            if (!fileUrl) { console.log(`Skipping ${sub.id} — no file`); continue; }
+            if (!fileUrl) continue;
 
             try {
-                const imageUrl = await processImage(fileUrl); // download → resize → imgbb
-                newEntries.push({ name, imageUrl, submissionId: sub.id, timestamp: sub.created_at });
+                const imageUrl = await processImage(fileUrl);
+                newEntries.push({
+                    name,
+                    imageUrl,
+                    submissionId: sub.id,
+                    timestamp: sub.created_at,
+                    likes: 0 // Initialize likes for new entries
+                });
                 results.processed++;
-                console.log(`✓ ${sub.id} → ${imageUrl}`);
+                console.log(`✓ Added: ${sub.id}`);
             } catch (err) {
                 results.failed++;
                 results.errors.push(`${sub.id}: ${err.message}`);
-                console.error(`✗ ${sub.id}:`, err.message);
+                console.error(`✗ Failed ${sub.id}:`, err.message);
             }
         }
 
-        if (newEntries.length > 0) {
-            // Re-fetch bin to get latest (including possible recent pruning)
+        // 6. SINGLE UPDATE: Save everything (pruned + new batch) in one go to prevent race conditions
+        if (newEntries.length > 0 || removedCount > 0) {
+            // Refetch bin to get the absolute latest state (including recently added likes)
+            // and merge again to minimize overwrite risks
             const latestBin = await getBin();
-            const latestIds = new Set(latestBin.map(s => s.submissionId).filter(Boolean));
-            const toAdd = newEntries.filter(e => !latestIds.has(e.submissionId));
-            await updateBin([...toAdd, ...latestBin]);
+
+            // Re-apply pruning on the latest data
+            const finalPruned = latestBin.filter(e => {
+                if (!e.submissionId) return true;
+                return activeJotformMap.has(e.submissionId);
+            });
+
+            // Filter new entries that might have been added in the meantime
+            const finalIds = new Set(finalPruned.map(e => e.submissionId).filter(Boolean));
+            const filteredNewEntries = newEntries.filter(e => !finalIds.has(e.submissionId));
+
+            await updateBin([...filteredNewEntries, ...finalPruned]);
+            console.log(`Bin updated successfully. Total items: ${filteredNewEntries.length + finalPruned.length}`);
         }
 
         return {
@@ -124,7 +149,7 @@ exports.handler = async (event) => {
             headers: CORS,
             body: JSON.stringify({
                 ...results,
-                totalMissing: missing.length,
+                totalMissing: missingFromBin.length,
                 offset,
                 hasMore,
                 nextOffset: hasMore ? offset + limit : null,
