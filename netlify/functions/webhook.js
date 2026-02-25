@@ -177,7 +177,11 @@ exports.handler = async (event) => {
 
     // Save to JSONBin
     const submissions = await getBin();
-    submissions.unshift({ name, imageUrl, timestamp: new Date().toISOString() });
+    // Avoid duplicates: skip if submissionId already exists
+    if (submissionId && submissions.some(s => s.submissionId === submissionId)) {
+      return { statusCode: 200, body: JSON.stringify({ success: true, skipped: true, reason: 'duplicate' }) };
+    }
+    submissions.unshift({ name, imageUrl, submissionId, timestamp: new Date().toISOString() });
     await updateBin(submissions);
 
     return { statusCode: 200, body: JSON.stringify({ success: true, imageUrl }) };

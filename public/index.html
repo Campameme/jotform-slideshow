@@ -243,13 +243,15 @@
 
   <script>
     const API_URL = '/.netlify/functions/submissions';
-    const POLL_INTERVAL = 30000;
+    const SYNC_URL = '/.netlify/functions/sync';
+    const POLL_MS = 30000;   // reload every 30 seconds
+    const SYNC_MS = 5 * 60000; // backfill check every 5 min
     const CARD_W = 380;
     const GAP = 28;
 
-    let currentCount = 0;
     let trackEl = null;
 
+    // ── Build track from a random start position ─────────────────────────────
     function buildTrack(submissions) {
       const wrapper = document.getElementById('showWrapper');
       const empty = document.getElementById('emptyState');
@@ -262,18 +264,26 @@
 
       empty.style.display = 'none';
 
-      const minCopies = Math.ceil((window.innerWidth * 3) / ((CARD_W + GAP) * submissions.length)) + 2;
+      const oneSetWidth = submissions.length * (CARD_W + GAP);
+      const minCopies = Math.ceil((window.innerWidth * 3) / oneSetWidth) + 2;
       const totalCopies = Math.max(minCopies, 4);
       const cards = Array.from({ length: totalCopies }, () => submissions).flat();
-      const oneSetWidth = submissions.length * (CARD_W + GAP);
 
       if (trackEl) trackEl.remove();
 
       trackEl = document.createElement('div');
       trackEl.className = 'track';
       trackEl.style.setProperty('--track-shift', `-${oneSetWidth}px`);
-      const speed = Math.max(submissions.length * 6, 20);
+
+      // Speed: 7s per card, minimum 20s total
+      const speed = Math.max(submissions.length * 7, 20);
       trackEl.style.animationDuration = `${speed}s`;
+
+      // Random start: pick a random card index and set negative delay
+      const randomIndex = Math.floor(Math.random() * submissions.length);
+      const randomOffset = randomIndex * (CARD_W + GAP);
+      const delaySeconds = (randomOffset / oneSetWidth) * speed;
+      trackEl.style.animationDelay = `-${delaySeconds}s`;
 
       cards.forEach(({ name, imageUrl }) => {
         const card = document.createElement('div');
@@ -300,9 +310,9 @@
       });
 
       wrapper.appendChild(trackEl);
-      currentCount = submissions.length;
     }
 
+    // ── Fetch submissions ─────────────────────────────────────────────────────
     async function fetchSubmissions() {
       try {
         const res = await fetch(API_URL);
@@ -315,17 +325,29 @@
       }
     }
 
-    async function refresh() {
-      const submissions = await fetchSubmissions();
-      if (submissions !== null && submissions.length !== currentCount) {
-        buildTrack(submissions);
-      }
-    }
-
-    (async () => {
+    // ── Reload: rebuild track with new random start every 30s ────────────────
+    async function reload() {
       const submissions = await fetchSubmissions();
       if (submissions !== null) buildTrack(submissions);
-      setInterval(refresh, POLL_INTERVAL);
+    }
+
+    // ── Sync: trigger backfill of missing Jotform submissions ────────────────
+    async function triggerSync() {
+      try {
+        await fetch(SYNC_URL);
+        // After sync, reload to show any new images
+        await reload();
+      } catch (e) { /* silent */ }
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    (async () => {
+      // Trigger sync on load to catch any missed submissions
+      await triggerSync();
+      // Reload every 30 seconds with a new random start position
+      setInterval(reload, POLL_MS);
+      // Full sync every 5 minutes
+      setInterval(triggerSync, SYNC_MS);
     })();
   </script>
 </body>
