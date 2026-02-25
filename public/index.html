@@ -85,7 +85,6 @@
       position: relative;
     }
 
-    /* Fade edges */
     .slideshow-wrapper::before,
     .slideshow-wrapper::after {
       content: '';
@@ -110,11 +109,11 @@
     .track {
       display: flex;
       gap: var(--gap);
-      animation: scroll var(--speed, 35s) linear infinite;
+      animation: scroll linear infinite;
+      animation-duration: var(--speed, 35s);
       will-change: transform;
     }
 
-    /* Pause on hover only on real-hover devices (not touch) */
     @media (hover: hover) {
       .track:hover {
         animation-play-state: paused;
@@ -238,20 +237,18 @@
       <h2>La galleria è vuota</h2>
       <p>Le immagini caricate tramite il form appariranno qui automaticamente.</p>
     </div>
-    <!-- Track injected by JS -->
   </div>
 
   <script>
     const API_URL = '/.netlify/functions/submissions';
     const SYNC_URL = '/.netlify/functions/sync';
-    const POLL_MS = 30000;   // reload every 30 seconds
-    const SYNC_MS = 5 * 60000; // backfill check every 5 min
+    const POLL_MS = 30000; // re-shuffle + redraw every 30s
     const CARD_W = 380;
     const GAP = 28;
 
     let trackEl = null;
 
-    // ── Fisher-Yates fair shuffle ─────────────────────────────────────────────
+    // ── Fisher-Yates shuffle ────────────────────────────────────────────────────
     function shuffle(arr) {
       const a = [...arr];
       for (let i = a.length - 1; i > 0; i--) {
@@ -261,7 +258,9 @@
       return a;
     }
 
-    // ── Build track from a shuffled order ─────────────────────────────────────
+    // ── Build seamless fair-shuffle track ───────────────────────────────────────
+    // RULE: all copies of the track must use the SAME shuffle order so the CSS
+    // animation loop is seamless AND each image is seen once before any repeats.
     function buildTrack(submissions) {
       const wrapper = document.getElementById('showWrapper');
       const empty = document.getElementById('emptyState');
@@ -274,24 +273,24 @@
 
       empty.style.display = 'none';
 
-      // Shuffle so every image appears once before repeating
+      // One canonical shuffle per build cycle
       const ordered = shuffle(submissions);
       const oneSetWidth = ordered.length * (CARD_W + GAP);
+
+      // How many identical copies to fill 3x the screen width (ensures no gap)
       const minCopies = Math.ceil((window.innerWidth * 3) / oneSetWidth) + 2;
-      const totalCopies = Math.max(minCopies, 4);
-      // Each copy is independently re-shuffled for variety across loops
-      const cards = Array.from({ length: totalCopies }, () => shuffle(ordered)).flat();
+      const totalCopies = Math.max(minCopies, 3);
+
+      // ALL copies are IDENTICAL — seamless CSS loop, fair ordering guaranteed
+      const cards = Array.from({ length: totalCopies }, () => [...ordered]).flat();
 
       if (trackEl) trackEl.remove();
 
       trackEl = document.createElement('div');
       trackEl.className = 'track';
+      // Shift exactly oneSetWidth → animation loops back to identical start
       trackEl.style.setProperty('--track-shift', `-${oneSetWidth}px`);
-
-      // Speed: 7s per card, minimum 20s total
-      const speed = Math.max(ordered.length * 7, 20);
-      trackEl.style.animationDuration = `${speed}s`;
-      // No animationDelay needed — shuffle already randomises starting order
+      trackEl.style.setProperty('--speed', `${Math.max(ordered.length * 7, 20)}s`);
 
       cards.forEach(({ name, imageUrl }) => {
         const card = document.createElement('div');
@@ -320,7 +319,7 @@
       wrapper.appendChild(trackEl);
     }
 
-    // ── Fetch submissions ─────────────────────────────────────────────────────
+    // ── Fetch (always cache-busted) ─────────────────────────────────────────────
     async function fetchSubmissions() {
       try {
         const res = await fetch(`${API_URL}?_=${Date.now()}`);
@@ -333,41 +332,43 @@
       }
     }
 
-    // ── Reload: rebuild track with new random start every 30s ────────────────
+    // ── Reload: fresh fetch + new shuffle ──────────────────────────────────────
     async function reload() {
-      const submissions = await fetchSubmissions();
-      if (submissions !== null) buildTrack(submissions);
+      const subs = await fetchSubmissions();
+      if (subs !== null) buildTrack(subs);
     }
 
-    // ── Sync: backfill all missing Jotform submissions in batches ───────────────
-    async function triggerSync() {
-      try {
-        let offset = 0;
-        let hasMore = true;
-        while (hasMore) {
-          const res = await fetch(`${SYNC_URL}?offset=${offset}`);
+    // ── One-shot sync backfill (runs only once on page load) ────────────────────
+    // NOT on an interval — prevents re-adding submissions deleted from Jotform.
+    async function runSyncOnce() {
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        try {
+          const res = await fetch(`${SYNC_URL}?offset=${offset}&_=${Date.now()}`);
           const data = await res.json();
           console.log('Sync batch:', data);
           hasMore = data.hasMore || false;
           offset = data.nextOffset || 0;
-          if (data.processed > 0) await reload(); // show new images after each batch
-          if (!hasMore) break;
+          if (data.processed > 0) await reload(); // show new images immediately
+        } catch (e) {
+          console.warn('Sync error:', e);
+          break;
         }
-      } catch (e) { console.warn('Sync error:', e); }
+      }
     }
 
-    // ── Init ──────────────────────────────────────────────────────────────────
+    // ── Init ────────────────────────────────────────────────────────────────────
     (async () => {
-      // 1. Show existing images immediately (don't wait for sync)
+      // 1. Show existing images immediately
       await reload();
-      // 2. Run sync in background to backfill any missing submissions
-      triggerSync(); // intentionally not awaited — runs in background
-      // 3. Reload every 30s with a new random start position
+      // 2. One-shot backfill in background (catches missed webhooks only)
+      runSyncOnce();
+      // 3. Re-shuffle and redraw every 30s for fresh random ordering
       setInterval(reload, POLL_MS);
-      // 4. Full sync every 5 minutes
-      setInterval(triggerSync, SYNC_MS);
     })();
   </script>
+
 </body>
 
 </html>
