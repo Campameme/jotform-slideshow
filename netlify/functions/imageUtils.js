@@ -19,7 +19,7 @@ async function downloadJotformImage(fileUrl) {
         redirect: 'follow',
     });
     const ct = res.headers.get('content-type') || '';
-    if (!res.ok || !ct.startsWith('image/')) {
+    if (!res.ok || (!ct.startsWith('image/') && ct !== 'application/octet-stream')) {
         throw new Error(`Jotform CDN returned non-image (${res.status} ${ct})`);
     }
     const buf = await res.arrayBuffer();
