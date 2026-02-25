@@ -1,14 +1,12 @@
 // netlify/functions/imageUtils.js
-// Shared utilities: authenticated Jotform download + sharp resize + imgbb upload
+// Shared utilities: authenticated Jotform download + imgbb upload
+// NOTE: No native image processing libraries (sharp incompatible with NFT bundler).
+// Images are uploaded as-is to imgbb which serves them via CDN.
 
 const fetch = require('node-fetch');
-const sharp = require('sharp');
 
 const JOTFORM_API_KEY = process.env.JOTFORM_API_KEY;
 const IMGBB_API_KEY = process.env.IMGBB_API_KEY;
-
-// Max width for resized images (px). Keeps quality good while cutting file size 80-90%.
-const MAX_WIDTH = 1200;
 
 /**
  * Download an image from Jotform CDN using API key auth.
@@ -29,21 +27,10 @@ async function downloadJotformImage(fileUrl) {
 }
 
 /**
- * Resize image buffer to MAX_WIDTH, convert to JPEG quality 82.
- * Returns base64 string ready for imgbb.
+ * Upload image buffer to imgbb. Returns permanent public URL.
  */
-async function resizeAndEncode(imageBuffer) {
-    const resized = await sharp(imageBuffer)
-        .resize({ width: MAX_WIDTH, withoutEnlargement: true }) // never upscale
-        .jpeg({ quality: 82, mozjpeg: true })
-        .toBuffer();
-    return resized.toString('base64');
-}
-
-/**
- * Upload base64 image to imgbb. Returns permanent public URL.
- */
-async function uploadToImgbb(base64) {
+async function uploadToImgbb(imageBuffer) {
+    const base64 = imageBuffer.toString('base64');
     const body = new URLSearchParams();
     body.append('key', IMGBB_API_KEY);
     body.append('image', base64);
@@ -54,12 +41,11 @@ async function uploadToImgbb(base64) {
 }
 
 /**
- * Full pipeline: download → resize → upload to imgbb → return permanent URL.
+ * Full pipeline: download from Jotform → upload to imgbb → return permanent URL.
  */
 async function processImage(jotformFileUrl) {
-    const rawBuffer = await downloadJotformImage(jotformFileUrl);
-    const base64 = await resizeAndEncode(rawBuffer);
-    return uploadToImgbb(base64);
+    const buffer = await downloadJotformImage(jotformFileUrl);
+    return uploadToImgbb(buffer);
 }
 
-module.exports = { downloadJotformImage, resizeAndEncode, uploadToImgbb, processImage };
+module.exports = { downloadJotformImage, uploadToImgbb, processImage };

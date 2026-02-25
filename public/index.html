@@ -350,11 +350,13 @@
 
     // ── Init ──────────────────────────────────────────────────────────────────
     (async () => {
-      // Trigger sync on load to catch any missed submissions
-      await triggerSync();
-      // Reload every 30 seconds with a new random start position
+      // 1. Show existing images immediately (don't wait for sync)
+      await reload();
+      // 2. Run sync in background to backfill any missing submissions
+      triggerSync(); // intentionally not awaited — runs in background
+      // 3. Reload every 30s with a new random start position
       setInterval(reload, POLL_MS);
-      // Full sync every 5 minutes
+      // 4. Full sync every 5 minutes
       setInterval(triggerSync, SYNC_MS);
     })();
   </script>
