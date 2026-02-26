@@ -127,56 +127,6 @@
     }
 
     /* ── Navigation Controls ── */
-    .controls-bar {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 0;
-      z-index: 100;
-      position: relative;
-    }
-
-    .jump-group {
-      display: flex;
-      gap: 8px;
-      background: rgba(19, 19, 26, 0.6);
-      padding: 6px 12px;
-      border-radius: 40px;
-      border: 1px solid rgba(124, 111, 247, 0.2);
-      backdrop-filter: blur(10px);
-    }
-
-    .nav-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: var(--surface);
-      border: 1px solid rgba(124, 111, 247, 0.3);
-      color: var(--text);
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: 0.85rem;
-    }
-
-    .nav-btn:hover {
-      background: var(--accent);
-      color: white;
-      border-color: transparent;
-      transform: translateY(-2px);
-    }
-
-    .nav-btn.forward {
-      border-color: rgba(79, 209, 197, 0.4);
-    }
-
-    .nav-btn.forward:hover {
-      background: var(--accent2);
-    }
 
     /* ── Thumbnail Slider ── */
     .thumb-nav {
@@ -318,7 +268,6 @@
       height: 80%;
       background: #000;
       overflow: hidden;
-      pointer-events: none;
     }
 
     .card-img-blur {
@@ -383,6 +332,7 @@
       align-items: center;
       justify-content: center;
       padding: 0 20px;
+      pointer-events: none;
     }
 
     .card-name {
@@ -393,6 +343,40 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    /* ── Heart Animation ── */
+    .heart-popup {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      font-size: 80px;
+      color: #ef4444;
+      pointer-events: none;
+      z-index: 100;
+      text-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .heart-popup.animate {
+      animation: heart-pop 0.8s ease-out forwards;
+    }
+
+    @keyframes heart-pop {
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+      }
+
+      30% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0;
+      }
     }
 
     .empty-state {
@@ -418,25 +402,13 @@
       </div>
     </div>
 
-    <div class="controls-bar">
-      <div class="jump-group">
-        <button class="nav-btn" onclick="jump(-5)">-5</button>
-        <button class="nav-btn" onclick="jump(-3)">-3</button>
-        <button class="nav-btn" onclick="jump(-1)">-1</button>
-        <span style="width: 10px;"></span>
-        <button class="nav-btn forward" onclick="jump(1)">+1</button>
-        <button class="nav-btn forward" onclick="jump(3)">+3</button>
-        <button class="nav-btn forward" onclick="jump(5)">+5</button>
+    <div class="thumb-nav">
+      <div class="thumb-label">Opere</div>
+      <div class="thumb-scroll-wrapper">
+        <button class="thumb-arrow left" onclick="scrollThumbs(-1)">&#8249;</button>
+        <div class="thumb-container" id="thumbContainer"></div>
+        <button class="thumb-arrow right" onclick="scrollThumbs(1)">&#8250;</button>
       </div>
-    </div>
-  </div>
-
-  <div class="thumb-nav">
-    <div class="thumb-label">Opere</div>
-    <div class="thumb-scroll-wrapper">
-      <button class="thumb-arrow left" onclick="scrollThumbs(-1)">&#8249;</button>
-      <div class="thumb-container" id="thumbContainer"></div>
-      <button class="thumb-arrow right" onclick="scrollThumbs(1)">&#8250;</button>
     </div>
   </div>
 
@@ -508,6 +480,13 @@
         img.onload = () => img.classList.add('loaded');
 
         media.appendChild(blurImg); media.appendChild(img); media.appendChild(likeBtn);
+
+        // Double tap feedback
+        const heartPopup = document.createElement('div');
+        heartPopup.className = 'heart-popup';
+        heartPopup.innerHTML = '&#10084;';
+        media.appendChild(heartPopup);
+
         const info = document.createElement('div');
         info.className = 'card-info';
         const nameEl = document.createElement('div');
@@ -515,6 +494,20 @@
         nameEl.textContent = sub.name || 'Senza nome';
         info.appendChild(nameEl);
         card.appendChild(media); card.appendChild(info);
+
+        // Double Click / Double Tap Logic
+        let lastTap = 0;
+        card.addEventListener('touchend', (e) => {
+          const currentTime = new Date().getTime();
+          const tapLength = currentTime - lastTap;
+          if (tapLength < 300 && tapLength > 0) {
+            toggleLike(sub.submissionId, card);
+            e.preventDefault();
+          }
+          lastTap = currentTime;
+        });
+        card.addEventListener('dblclick', () => toggleLike(sub.submissionId, card));
+
         trackEl.appendChild(card);
       });
 
@@ -559,8 +552,19 @@
       }, 800);
     }
 
-    async function toggleLike(id) {
+    async function toggleLike(id, cardEl = null) {
       if (localStorage.getItem('liked_' + id)) return;
+
+      // Trigger heart animation if cardEl is provided
+      if (cardEl) {
+        const popup = cardEl.querySelector('.heart-popup');
+        if (popup) {
+          popup.classList.remove('animate');
+          void popup.offsetWidth; // trigger reflow
+          popup.classList.add('animate');
+        }
+      }
+
       const btns = document.querySelectorAll(`[id="likes-${id}"]`);
       try {
         const res = await fetch(LIKE_URL, {
@@ -608,10 +612,14 @@
     }
 
     // Drag / Swipe Logic
+    let dragActivated = false; // becomes true only after moving 10px
+
     function handleStart(e) {
       if (isJumping) return;
+      // Don't intercept taps on interactive elements (like-btn)
+      if (e.target.closest('.like-btn')) return;
       isDragging = true;
-      isPaused = true;
+      dragActivated = false;
       startXPx = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
       dragStartX = x;
       if (trackEl) trackEl.style.transition = 'none';
@@ -621,7 +629,16 @@
     function handleMove(e) {
       if (!isDragging) return;
       const currentXPx = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-      const delta = (currentXPx - startXPx) * 1.5; // Sensitivity
+      const rawDelta = currentXPx - startXPx;
+
+      // Activate drag only after threshold
+      if (!dragActivated) {
+        if (Math.abs(rawDelta) < 10) return;
+        dragActivated = true;
+        isPaused = true;
+      }
+
+      const delta = rawDelta * 1.5; // Sensitivity
       x = dragStartX + delta;
 
       // Infinite loop normalization during drag
@@ -631,12 +648,13 @@
       if (trackEl) trackEl.style.transform = `translateX(${x}px)`;
 
       // Prevent page scroll during horizontal swipe
-      if (Math.abs(delta) > 10 && e.cancelable) e.preventDefault();
+      if (e.cancelable) e.preventDefault();
     }
 
-    function handleEnd() {
+    function handleEnd(e) {
       if (!isDragging) return;
       isDragging = false;
+      dragActivated = false;
       isPaused = false;
     }
 
