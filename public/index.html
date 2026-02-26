@@ -152,15 +152,39 @@
       align-items: center;
     }
 
+    /* fade hints on edges to show there's more content */
+    .thumb-scroll-wrapper::before,
+    .thumb-scroll-wrapper::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 40px;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .thumb-scroll-wrapper::before {
+      left: 0;
+      background: linear-gradient(90deg, var(--bg), transparent);
+    }
+
+    .thumb-scroll-wrapper::after {
+      right: 0;
+      background: linear-gradient(270deg, var(--bg), transparent);
+    }
+
     .thumb-container {
       display: flex;
       gap: 12px;
       overflow-x: auto;
-      scrollbar-width: none;
-      padding: 10px 0;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(124, 111, 247, 0.5) transparent;
+      padding: 10px 4px 14px;
       scroll-behavior: smooth;
       cursor: grab;
       user-select: none;
+      flex: 1;
     }
 
     .thumb-container:active {
@@ -168,13 +192,20 @@
     }
 
     .thumb-container::-webkit-scrollbar {
-      display: none;
+      height: 4px;
+    }
+
+    .thumb-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .thumb-container::-webkit-scrollbar-thumb {
+      background: rgba(124, 111, 247, 0.5);
+      border-radius: 4px;
     }
 
     .thumb-arrow {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
+      flex-shrink: 0;
       width: 36px;
       height: 36px;
       background: rgba(19, 19, 26, 0.9);
@@ -188,19 +219,13 @@
       z-index: 10;
       transition: all 0.2s;
       font-size: 1.2rem;
+      position: static;
+      transform: none;
     }
 
     .thumb-arrow:hover {
       background: var(--accent);
       border-color: transparent;
-    }
-
-    .thumb-arrow.left {
-      left: -45px;
-    }
-
-    .thumb-arrow.right {
-      right: -45px;
     }
 
     .thumb-item {
@@ -237,11 +262,13 @@
 
     @media (max-width: 600px) {
       .thumb-nav {
-        padding: 0 10px;
+        padding: 0 8px;
       }
 
       .thumb-arrow {
-        display: none;
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
       }
     }
 
@@ -616,8 +643,9 @@
 
     function handleStart(e) {
       if (isJumping) return;
-      // Don't intercept taps on interactive elements (like-btn)
+      // Don't intercept taps on like button or thumbnail strip
       if (e.target.closest('.like-btn')) return;
+      if (e.target.closest('.thumb-nav')) return;
       isDragging = true;
       dragActivated = false;
       startXPx = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
